@@ -2,8 +2,6 @@
 library(tidyverse)
 library(readbulk)
 df = readbulk::read_bulk('data', sep=';', na.strings = 'none', stringsAsFactors=FALSE)
-# helper= read.csv('DataRepair.csv',sep=";")
-# daggByScen<-merge(daggByScen,helper)
 
 df$testID<-as.numeric(gsub("[^0-9.-]", "", substr(df$File,7,10)))
 df$Test.ID<-NULL

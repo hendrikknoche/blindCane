@@ -4,6 +4,10 @@ library(lubridate)
 
 
 load('data_all.rda') 
+# helper= read.csv('DataRepair.csv',sep=";")
+# daggByScen<-merge(daggByScen,helper)
+
+
 ggplot(dagg,aes(maxSpeed)) + 
   geom_histogram()+
   scale_y_continuous(trans='log2')
