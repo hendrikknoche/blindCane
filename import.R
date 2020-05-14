@@ -24,4 +24,4 @@ df$timeSinceExpStarted<-time(df$Time_stamp) -min(time(df$Time_stamp))
 save(df, file='data_all.rda', compress=TRUE)
 
 
-difftime(df[50000,]$Time_stamp,df[1,]$Time_stamp,units="secs")
+
