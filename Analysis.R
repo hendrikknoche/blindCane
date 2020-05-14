@@ -9,12 +9,20 @@ ggplot(dagg,aes(maxSpeed)) +
   scale_y_continuous(trans='log2')
 
 #data needs filtering on Speed
+# testID, day, 
+daggByScen<-df %>% filter(Person_Speed<5)%>%group_by(day,FOD,testID, Scenario,Range)%>%summarize(Time=max(Time_in_MS*1000),avgSpeed=mean(Person_Speed),objectCollisions=sum(objColl,na.rm = TRUE),maxSpeed=max(Person_Speed))%>% arrange(testID)
+daggByScen$totalTimeTraining<-round(cumsum(daggByScen$Time))
 
-dagg<-df %>% filter(Person_Speed<5)%>%group_by(day,FOD,Scenario,Range)%>%summarize(Time=max(Time_in_MS*1000),avgSpeed=mean(Person_Speed),objectCollisions=sum(objColl,na.rm = TRUE),maxSpeed=max(Person_Speed),max())
-doa<-dagg %>%group_by(day,FOD,Range)%>%summarize(Time=max(Time),speedSD=sd(avgSpeed),avgSpeed=mean(avgSpeed),maxSpeed=max(maxSpeed))
+daggByScen <-daggByScen%>%group_by(FOD,day,Range)%>%mutate(timeFDRtrain=round(cumsum(Time)))
+daggByScen <-daggByScen%>%group_by(FOD,day)%>%mutate(timeFDtrain=round(cumsum(Time)))
+daggByScen <-daggByScen%>%group_by(day)%>%mutate(timeDtrain=round(cumsum(Time)))
 
-ggplot(dagg,aes(x=FOD,y=Time,color=Range))+geom_point(aes(alpha=.1))
+doa<-daggByScen %>%group_by(day,FOD,Range)%>%summarize(Time=max(Time),speedSD=sd(avgSpeed),avgSpeed=mean(avgSpeed),maxSpeed=max(maxSpeed))
 
-as.POSIXct(testd,format="%d/%m/%Y %H:%M:%S")
+ggplot(daggByScen,aes(x=FOD,y=Time,color=Range))+geom_point(aes(alpha=.1))
 
-as.numeric(difftime(df[50000,]$Time_stamp,df[1,]$Time_stamp,units="secs"))
+ggplot(daggByScen,aes(x=totalTimeTraining,y=Time))+geom_point()
+ggplot(daggByScen,aes(x=totalTimeTraining,y=Time,color=FOD))+geom_point()+ geom_smooth(size=0)+ 
+  stat_smooth(aes(color="red"),method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+theme_bw()+facet_grid(cols=vars(FOD))
+
+                                                                                         
