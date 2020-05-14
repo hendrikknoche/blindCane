@@ -1,5 +1,6 @@
 library(tidyverse)
 library(readbulk)
+library(lubridate)
 
 
 load('data_all.rda') 
@@ -9,8 +10,11 @@ ggplot(dagg,aes(maxSpeed)) +
 
 #data needs filtering on Speed
 
-dagg<-df %>% filter(Person_Speed<5)%>%group_by(day,FOD,Scenario,Range)%>%summarize(Time=max(Time_in_MS*1000),avgSpeed=mean(Person_Speed),objectCollisions=sum(objColl,na.rm = TRUE),maxSpeed=max(Person_Speed))
+dagg<-df %>% filter(Person_Speed<5)%>%group_by(day,FOD,Scenario,Range)%>%summarize(Time=max(Time_in_MS*1000),avgSpeed=mean(Person_Speed),objectCollisions=sum(objColl,na.rm = TRUE),maxSpeed=max(Person_Speed),max())
 doa<-dagg %>%group_by(day,FOD,Range)%>%summarize(Time=max(Time),speedSD=sd(avgSpeed),avgSpeed=mean(avgSpeed),maxSpeed=max(maxSpeed))
 
 ggplot(dagg,aes(x=FOD,y=Time,color=Range))+geom_point(aes(alpha=.1))
 
+as.POSIXct(testd,format="%d/%m/%Y %H:%M:%S")
+
+as.numeric(difftime(df[50000,]$Time_stamp,df[1,]$Time_stamp,units="secs"))

@@ -11,4 +11,6 @@ df<-rename(df, day = Day_nr.)
 df$Object_collision<-gsub('null', '', df$Object_collision)
 df$objBefore<-c('',df[1:(nrow(df)-1),]$Object_collision)
 df$objColl<-ifelse(substr(df$Object_collision,1,1)=="B" & df$objBefore=='',1,0)
+df$Time_stamp<- as.POSIXct(df$Time_stamp,format="%d/%m/%Y %H:%M:%S")
+df<-df[order(df$Time_stamp),]
 save(df, file='data_all.rda', compress=TRUE)
