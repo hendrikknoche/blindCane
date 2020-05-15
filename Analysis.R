@@ -2,7 +2,7 @@ library(tidyverse)
 library(readbulk)
 library(lubridate)
 library(ggplot2)
-library(scales) # for muted function
+library(scales) 
 
 #Load all data files
 load('data_all.rda')
@@ -159,9 +159,9 @@ ggplot(daggHeat, aes(x = Range, y = Scenario)) +
   geom_tile(aes(fill = avgSpeed)) + 
   geom_text(aes(fill = daggHeat$avgSpeed, label = round(daggHeat$avgSpeed, 2))) + 
   scale_fill_gradient2(low = muted("red"), 
-                       mid = "red", 
+                       mid = "yellow", 
                        high = muted("green"), 
-                       midpoint = 0) + 
+                       midpoint = 0.75) + 
   theme(panel.grid.major.x=element_blank(), 
         panel.grid.minor.x=element_blank(), 
         panel.grid.major.y=element_blank(), 
@@ -181,9 +181,9 @@ ggplot(daggHeat, aes(x = Range, y = Scenario)) +
   geom_tile(aes(fill = objectDetected)) + 
   geom_text(aes(fill = daggHeat$objectDetected, label = round(daggHeat$objectDetected, 2))) + 
   scale_fill_gradient2(low = muted("green"), 
-                       mid = "green", 
+                       mid = "yellow", 
                        high = muted("red"), 
-                       midpoint = 0) + 
+                       midpoint = 30) + 
   theme(panel.grid.major.x=element_blank(), 
         panel.grid.minor.x=element_blank(), 
         panel.grid.major.y=element_blank(), 
@@ -203,9 +203,9 @@ ggplot(daggHeat, aes(x = Range, y = Scenario)) +
   geom_tile(aes(fill = objectCollisions)) + 
   geom_text(aes(fill = daggHeat$objectCollisions, label = round(daggHeat$objectCollisions, 2))) + 
   scale_fill_gradient2(low = muted("green"), 
-                       mid = "green", 
+                       mid = "yellow", 
                        high = muted("red"), 
-                       midpoint = 0) + 
+                       midpoint = 4) + 
   theme(panel.grid.major.x=element_blank(), 
         panel.grid.minor.x=element_blank(), 
         panel.grid.major.y=element_blank(), 
