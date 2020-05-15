@@ -1,6 +1,8 @@
 library(tidyverse)
 library(readbulk)
 library(lubridate)
+library(ggplot2)
+library(scales) # for muted function
 
 #Load all data files
 load('data_all.rda')
@@ -34,7 +36,7 @@ ggplot(daggByScen,aes(avgSpeed)) +
   scale_y_continuous(trans='log2')
 
 #AvgSpeed per senario
-ggplot(daggByScen,aes(x=Scenario,y=avgSpeed,color=FOD))+
+ggplot(daggByScen,aes(x=Scenario,y=avgSpeed,color=FOD,size=Range))+
   geom_point(aes(alpha=.1)) 
 
 #Histogram of medianSpeed
@@ -58,7 +60,7 @@ ggplot(daggByScen,aes(x=Scenario,y=maxSpeed,color=Range))+
 #----------------------------   The effect of detections
 
 #Number of detections effect on time
-ggplot(daggByScen,aes(x = Time, y = objectDetected, color = FOD))+
+ggplot(daggByScen,aes(x = Time, y = objectDetected, color = FOD, size = Range))+
   geom_point()+ 
   geom_smooth(size=0)+ 
   stat_smooth(aes(color="red"),method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)
@@ -115,6 +117,108 @@ ggplot(daggByScen,aes(x = avgSpeed, y = objectCollisions, color = Range))+
   theme_bw()+
   facet_grid(cols=vars(FOD))
 
+#----------------------------   The effect of Collisions and detection
+
+#Number of detections and collisions based on avgSpeed split by FOD
+ggplot(daggByScen,aes(x = avgSpeed, y = objectCollisions, colour = FOD))+
+  geom_point()+
+  #geom_smooth(size=0, color = "blue")+ 
+  stat_smooth(color="red",method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
+  geom_point(aes(x=avgSpeed, y=objectDetected), color = "green")+
+  #geom_smooth(aes(x = avgSpeed, y = objectDetected))+
+  stat_smooth(aes(x = avgSpeed, y = objectDetected), color="red",method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
+  facet_grid(cols=vars(Range))
+
+#Number of detections and collisions based on avgSpeed split by Range
+ggplot(daggByScen,aes(x = avgSpeed, y = objectCollisions, colour = Range))+
+  geom_point()+
+  #geom_smooth(size=0, color = "blue")+ 
+  stat_smooth(color="red",method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
+  geom_point(aes(x=avgSpeed, y=objectDetected), color = "green")+
+  #geom_smooth(aes(x = avgSpeed, y = objectDetected))+
+  stat_smooth(aes(x = avgSpeed, y = objectDetected), color="red",method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
+  facet_grid(cols=vars(FOD))
+
+#Number of detections and collisions based on avgSpeed split by FOD and Range
+ggplot(daggByScen,aes(x = avgSpeed, y = objectCollisions))+
+  geom_point(color="blue")+
+  #geom_smooth(size=0, color = "blue")+ 
+  stat_smooth(color="red",method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
+  geom_point(aes(x=avgSpeed, y=objectDetected), color = "green")+
+  #geom_smooth(aes(x = avgSpeed, y = objectDetected))+
+  stat_smooth(aes(x = avgSpeed, y = objectDetected), color="red",method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
+  facet_grid(cols=vars(FOD), rows=vars(Range))
+
+#----------------------------   Heatmap Table
+
+#Data Frame for heatmap table
+daggHeat <- df %>% filter(Person_Speed<3)%>%group_by(Scenario,FOD,Range)%>%summarize(avgSpeed=mean(Person_Speed),medianSpeed=median(Person_Speed),maxSpeed=max(Person_Speed),minSpeed=min(Person_Speed),objectDetected=sum(objDet,na.rm = TRUE),objectCollisions=sum(objColl,na.rm = TRUE),Time=max(Time_in_MS*1000))
+
+#Heatmap table over avgSpeed
+ggplot(daggHeat, aes(x = Range, y = Scenario)) + 
+  geom_tile(aes(fill = avgSpeed)) + 
+  geom_text(aes(fill = daggHeat$avgSpeed, label = round(daggHeat$avgSpeed, 2))) + 
+  scale_fill_gradient2(low = muted("red"), 
+                       mid = "red", 
+                       high = muted("green"), 
+                       midpoint = 0) + 
+  theme(panel.grid.major.x=element_blank(), 
+        panel.grid.minor.x=element_blank(), 
+        panel.grid.major.y=element_blank(), 
+        panel.grid.minor.y=element_blank(),
+        panel.background=element_rect(fill="white"), 
+        axis.text.x = element_text(angle=0, hjust = 1,vjust=1,size = 12,face = "bold"),
+        plot.title = element_text(size=20,face="bold"),
+        axis.text.y = element_text(size = 12,face = "bold")) + 
+  ggtitle("HeatMap Over avgSpeed per Scenario") + 
+  theme(legend.title=element_text(face="bold", size=14)) + 
+  scale_y_continuous(trans = "reverse")+
+  labs(fill="avgSpeed") +
+  facet_grid(cols=vars(FOD))
+
+#Heatmap table over Detections
+ggplot(daggHeat, aes(x = Range, y = Scenario)) + 
+  geom_tile(aes(fill = objectDetected)) + 
+  geom_text(aes(fill = daggHeat$objectDetected, label = round(daggHeat$objectDetected, 2))) + 
+  scale_fill_gradient2(low = muted("green"), 
+                       mid = "green", 
+                       high = muted("red"), 
+                       midpoint = 0) + 
+  theme(panel.grid.major.x=element_blank(), 
+        panel.grid.minor.x=element_blank(), 
+        panel.grid.major.y=element_blank(), 
+        panel.grid.minor.y=element_blank(),
+        panel.background=element_rect(fill="white"), 
+        axis.text.x = element_text(angle=0, hjust = 1,vjust=1,size = 12,face = "bold"),
+        plot.title = element_text(size=20,face="bold"),
+        axis.text.y = element_text(size = 12,face = "bold")) + 
+  ggtitle("HeatMap Over Detections per Scenario") + 
+  theme(legend.title=element_text(face="bold", size=14)) + 
+  scale_y_continuous(trans = "reverse")+
+  labs(fill="Detections") +
+  facet_grid(cols=vars(FOD))
+
+#Heatmap table over Collisions
+ggplot(daggHeat, aes(x = Range, y = Scenario)) + 
+  geom_tile(aes(fill = objectCollisions)) + 
+  geom_text(aes(fill = daggHeat$objectCollisions, label = round(daggHeat$objectCollisions, 2))) + 
+  scale_fill_gradient2(low = muted("green"), 
+                       mid = "green", 
+                       high = muted("red"), 
+                       midpoint = 0) + 
+  theme(panel.grid.major.x=element_blank(), 
+        panel.grid.minor.x=element_blank(), 
+        panel.grid.major.y=element_blank(), 
+        panel.grid.minor.y=element_blank(),
+        panel.background=element_rect(fill="white"), 
+        axis.text.x = element_text(angle=0, hjust = 1,vjust=1,size = 12,face = "bold"),
+        plot.title = element_text(size=20,face="bold"),
+        axis.text.y = element_text(size = 12,face = "bold")) + 
+  ggtitle("HeatMap Over Collisions per Scenario") + 
+  theme(legend.title=element_text(face="bold", size=14)) + 
+  scale_y_continuous(trans = "reverse")+
+  labs(fill="Collisions") +
+  facet_grid(cols=vars(FOD))
 
 #----------------------------   The effect of Training Time
 
@@ -127,10 +231,7 @@ upper_ci <- function(mean, se, n, conf_level = 0.95){
 
 
 #Data grouped by Day, FOD and Range
-daggByDFR<-daggByScen %>%group_by(FOD,day,Range)%>%summarize(totalTimeTraining=max(totalTimeTraining),avgTime=mean(Time),ssd = sd(Time),count=n(),se = ssd / sqrt(count))%>%mutate(lower_ci=lower_ci(avgTime,se,count),upper_ci=upper_ci(avgTime,se,count))
-
-
-doa<-daggByScen %>%group_by(day,FOD,Range)%>%summarize(Time=max(Time),speedSD=sd(avgSpeed),avgSpeed=mean(avgSpeed),maxSpeed=max(maxSpeed))
+daggByDFR<-daggByScen %>%group_by(FOD,day,Range)%>%summarize(totalTimeTraining=max(totalTimeTraining),avgTime=mean(Time),ssd = sd(Time),count=n(),se = ssd / sqrt(count))%>%mutate(lower_ci=lower_ci(avgTime,se,count),upper_ci=upper_ci(avgTime,se,count),objectDetected=mean(objectDetected))
 
 
 ggplot(daggByScen,aes(x=FOD,y=Time,color=Range))+
@@ -154,4 +255,10 @@ ggplot(daggByDFR,aes(x=totalTimeTraining,y=avgTime,color=factor(Range),shape=fac
   geom_errorbar(aes(ymin=lower_ci, ymax=upper_ci))+
   stat_smooth(method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
   theme_bw()+
+  geom_point(aes(y = objectDetected), color = "green")+
+  stat_smooth(aes(y = objectDetected), color="green",method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
   facet_grid(cols=vars(FOD))
+
+
+
+doa<-daggByScen %>%group_by(day,FOD,Range)%>%summarize(Time=max(Time),speedSD=sd(avgSpeed),avgSpeed=mean(avgSpeed),maxSpeed=max(maxSpeed))
