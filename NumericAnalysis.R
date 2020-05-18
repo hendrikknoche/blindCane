@@ -67,11 +67,19 @@ CorrVsWR4m <- df %>%
   summarize(objectCollisions = sum(objColl, na.rm = TRUE), objectDetected = sum(objDet, na.rm = TRUE), Range = mean(Range), Time = max(Time_in_MS * 1000))
 
 daggByScenWOBL<-daggByScen[!daggByScen$FOD=="Baseline",]
-m<-lm(Time~FOD*Range+totalTimeTraining,data=daggByScen[!daggByScen$FOD=="Baseline",])
-summary(m)
+m1<-lm(log(Time)~FOD*Range+totalTimeTraining,data=daggByScen)
+
+m2<-lm(log(Time)~FOD*log(Range)+log(totalTimeTraining),data=daggByScen)
+m0<-lm(log(Time)~log(totalTimeTraining)+FOD*log(Range),data=daggByScen)
+summary(m0)
+
+summary(anova(m1,m2))
+
+summary(m1)
+summary(m2)
 model_equation(m)
 daggByScenWOBL$predTime<-predict(m)
-
+step(m)
 
 # BaseLine, Corridor and WholeRoom data
 BVsCorrVsWHoleRoom2m <- df %>%
