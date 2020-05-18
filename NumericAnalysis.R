@@ -42,7 +42,11 @@ dataCorridor4m <- df %>%
 
 
 dataWhole <- daggByScen %>%
-  group_by(FOD, Range,PID) %>%
+  group_by(FOD, Range) %>%
+  summarize(objectCollisions = mean(objectCollisions, na.rm = TRUE), objectDetected = mean(objectDetected, na.rm = TRUE), Time = mean(Time * 1000))
+
+test<-daggByScen %>%
+  group_by(FOD, Range) %>%
   summarize(objectCollisions = mean(objectCollisions, na.rm = TRUE), objectDetected = mean(objectDetected, na.rm = TRUE), Time = mean(Time * 1000))
 
 
@@ -64,7 +68,10 @@ CorrVsWR4m <- df %>%
 
 daggByScenWOBL<-daggByScen[!daggByScen$FOD=="Baseline",]
 m<-lm(Time~FOD*Range+totalTimeTraining,data=daggByScen[!daggByScen$FOD=="Baseline",])
+summary(m)
 model_equation(m)
+daggByScenWOBL$predTime<-predict(m)
+
 
 # BaseLine, Corridor and WholeRoom data
 BVsCorrVsWHoleRoom2m <- df %>%
