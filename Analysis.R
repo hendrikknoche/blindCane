@@ -3,6 +3,11 @@ library(readbulk)
 library(lubridate)
 library(ggplot2)
 library(scales) 
+library(magrittr)
+
+#Removing data
+# "rm('name of dataset')"
+#
 
 #Load all data files
 load('data_all.rda')
@@ -159,6 +164,19 @@ ggplot(daggByScen,aes(y = avgSpeed, x = objectCollisions))+
   #geom_smooth(aes(x = avgSpeed, y = objectDetected))+
   stat_smooth(aes(x = objectDetected), color="red",method = 'nls', formula = 'y~a+x*b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
   facet_grid(cols=vars(FOD), rows=vars(Range))
+
+
+
+#Same as above but range is columns and rows are DOF#
+ggplot(daggByScen,aes(y = avgSpeed, x = objectCollisions))+
+  geom_point(color="blue")+
+  geom_jitter()+
+  #geom_smooth(size=0, color = "blue")+ 
+  stat_smooth(color="red",method = 'nls', formula = 'y~a+x*b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
+  geom_point(aes(x = objectDetected), color = "green")+
+  #geom_smooth(aes(x = avgSpeed, y = objectDetected))+
+  stat_smooth(aes(x = objectDetected), color="red",method = 'nls', formula = 'y~a+x*b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
+  facet_grid(cols=vars(Range), rows=vars(FOD))
 
 #----------------------------   Time of compleation vs avgSpeed
 
