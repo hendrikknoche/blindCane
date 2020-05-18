@@ -1,0 +1,90 @@
+---
+title: "Evaluating the detectionspace - statistical report"
+author: "by Milo Marsfeldt Skovfoged, Alexander Schiller Rasmussen"
+date: "18/5/2020"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+## Table of Contents
+1. [Introduction](#introduction)
+2. [Data information](#data-information)
+
+##Introduction (This doesent become a headline - why?)
+
+This is the statistical report associated with the paper "Evaluating the detection space" by Milo Marsfeldt Skovfoged & Alexander Schiller rasmussen. The field of study lies in research on behalf of visually impaired/blind navigation through environments  to find an ideal distance and Field of Detection (FOD) for the most progressive travel-route avoiding collisions as much as possible.
+This report gives an overview of how data for the study was gathered and analysed, in regrads to different points of interrest.
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(readbulk)
+library(lubridate)
+library(ggplot2)
+library(scales) 
+library(magrittr)
+
+#GetData
+load('data_all.rda')
+
+#Data Grouped by Snario
+daggByScen <- df %>% filter(Person_Speed<3)%>%group_by(testID,day,Scenario,FOD,Range)%>%summarize(avgSpeed=mean(Person_Speed),medianSpeed=median(Person_Speed),maxSpeed=max(Person_Speed),minSpeed=min(Person_Speed),objectDetected=sum(objDet,na.rm = TRUE),objectCollisions=sum(objColl,na.rm = TRUE),Time=max(Time_in_MS*1000))%>% arrange(testID)
+
+#add Coloum with sum of total time spent 
+daggByScen$totalTimeTraining<-round(cumsum(daggByScen$Time))
+
+#add Coloum with total time spent for a given FOD with a given Range
+daggByScen <- daggByScen%>%group_by(FOD,day,Range)%>%mutate(timeFDRtrain=round(cumsum(Time)))
+
+#add Coloum with total time spent for a given FOD
+daggByScen <- daggByScen%>%group_by(FOD,day)%>%mutate(timeFDtrain=round(cumsum(Time)))
+
+#add Coloum with total time spent for a given Day
+daggByScen <- daggByScen%>%group_by(day)%>%mutate(timeDtrain=round(cumsum(Time)))
+daggByCol <- df %>% filter(Person_Speed<3)%>%group_by(testID,day,Scenario,FOD,Range,objColl)%>%summarize(avgSpeed=mean(Person_Speed),medianSpeed=median(Person_Speed),maxSpeed=max(Person_Speed),minSpeed=min(Person_Speed),objectDetected=sum(objDet,na.rm = TRUE),objectCollisions=sum(objColl,na.rm = TRUE),Time=max(Time_in_MS*1000))%>% arrange(testID)
+
+
+###----------------Numeric Analysis part----------------###
+
+
+dataWhole <- daggByScen %>%
+  group_by(FOD, Range) %>%
+  summarize(objectCollisions = mean(objectCollisions, na.rm = TRUE), objectDetected = mean(objectDetected, na.rm = TRUE), Time = mean(Time * 1000))
+
+test<-daggByScen %>%
+  group_by(FOD, Range) %>%
+  summarize(objectCollisions = mean(objectCollisions, na.rm = TRUE), objectDetected = mean(objectDetected, na.rm = TRUE), Time = mean(Time * 1000))
+
+
+#WOBBL removes the baseline from the data and leaves us with Whole-room and Corridor
+daggByScenWOBL<-daggByScen[!daggByScen$FOD=="Baseline",]
+m<-lm(Time~FOD*Range+totalTimeTraining,data=daggByScen[!daggByScen$FOD=="Baseline",])
+summary(m)
+model_equation(m)
+daggByScenWOBL$predTime<-predict(m)
+
+
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data information
+Here goes the explanaion of our data in regards to what we logged and how is is structured.
+
+
+```{r first summary, echo=FALSE}
+
+summary(daggByScen)
+# summary(nameOfDataFile)
+#Shows a table of the data (e.g. could be the coefficients for completion time to FOD compairson)
+```
+
+Here goes exlanation of the plot:
+
+```{r First plot, echo=FALSE}
+##("echo=FALSE" parameter was added to the code chunk to prevent printing of the R code that generated the plot.)
+
+# plot(nameOfPlot) OR do something custom ¯\_(ツ)_/¯
+```
+
+## This is a new section headline
