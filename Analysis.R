@@ -41,6 +41,11 @@ ggplot(daggByScen,aes(avgSpeed)) +
   geom_histogram()+
   scale_y_continuous(trans='log2')
 
+##Curve
+ggplot(daggByScen,aes(avgSpeed)) + 
+  geom_density()+
+  scale_y_continuous(trans='log2')
+
 #AvgSpeed per senario
 ggplot(daggByScen,aes(x=Scenario,y=avgSpeed,color=FOD,size=Range))+
   geom_point(aes(alpha=.1)) 

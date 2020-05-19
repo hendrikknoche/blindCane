@@ -10,6 +10,7 @@ output:
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Data information](#data-information)
+3. [Predicition of course completion time](#predicition-of-course-completion-time)
 
 ##Introduction (This doesent become a headline - why?)
 
@@ -44,6 +45,31 @@ daggByScen <- daggByScen%>%group_by(day)%>%mutate(timeDtrain=round(cumsum(Time))
 daggByCol <- df %>% filter(Person_Speed<3)%>%group_by(testID,day,Scenario,FOD,Range,objColl)%>%summarize(avgSpeed=mean(Person_Speed),medianSpeed=median(Person_Speed),maxSpeed=max(Person_Speed),minSpeed=min(Person_Speed),objectDetected=sum(objDet,na.rm = TRUE),objectCollisions=sum(objColl,na.rm = TRUE),Time=max(Time_in_MS*1000))%>% arrange(testID)
 
 
+#Model equation
+model_equation <- function(model, ...) {
+  format_args <- list(...)
+  
+  model_coeff <- model$coefficients
+  format_args$x <- abs(model$coefficients)
+  model_coeff_sign <- sign(model_coeff)
+  model_coeff_prefix <- case_when(model_coeff_sign == -1 ~ " - ",
+                                  model_coeff_sign == 1 ~ " + ",
+                                  model_coeff_sign == 0 ~ " + ")
+  model_eqn <- paste(strsplit(as.character(model$call$formula), "~")[[2]], # 'y'
+                     "=",
+                     paste(if_else(model_coeff[1]<0, "- ", ""),
+                           do.call(format, format_args)[1],
+                           paste(model_coeff_prefix[-1],
+                                 do.call(format, format_args)[-1],
+                                 " * ",
+                                 names(model_coeff[-1]),
+                                 sep = "", collapse = ""),
+                           sep = ""))
+  return(model_eqn)
+}
+
+
+
 ###----------------Numeric Analysis part----------------###
 
 
@@ -62,6 +88,23 @@ m<-lm(Time~FOD*Range+totalTimeTraining,data=daggByScen[!daggByScen$FOD=="Baselin
 summary(m)
 model_equation(m)
 daggByScenWOBL$predTime<-predict(m)
+
+m0<-lm(log(Time)~log(totalTimeTraining)+FOD*log(Range),data=daggByScen)
+
+
+###----------------Plots data----------------###
+lower_ci <- function(mean, se, n, conf_level = 0.95){
+  lower_ci <- mean - qt(1 - ((1 - conf_level) / 2), n - 1) * se
+}
+upper_ci <- function(mean, se, n, conf_level = 0.95){
+  upper_ci <- mean + qt(1 - ((1 - conf_level) / 2), n - 1) * se
+}
+
+daggByDFR<-daggByScen %>%group_by(FOD,day,Range)%>%summarize(totalTimeTraining=max(totalTimeTraining),avgTime=mean(Time),ssd = sd(Time),count=n(),se = ssd / sqrt(count))%>%mutate(lower_ci=lower_ci(avgTime,se,count),upper_ci=upper_ci(avgTime,se,count))
+
+#Learning curve
+
+
 
 
 
@@ -87,4 +130,30 @@ Here goes exlanation of the plot:
 # plot(nameOfPlot) OR do something custom ¯\_(ツ)_/¯
 ```
 
-## This is a new section headline
+
+## Predicition of course completion time
+
+```{r Comp.Time.Pred., echo=FALSE}
+summary(m0)
+```
+
+
+
+
+```{r , echo=FALSE}
+#Figure has an error
+ggplot(daggByDFR,aes(x=totalTimeTraining,y=avgTime,color=factor(Range),shape=factor(Range)))+
+  geom_point()+ 
+  geom_smooth(size=0)+ 
+  geom_errorbar(aes(ymin=lower_ci, ymax=upper_ci))+
+  stat_smooth(method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
+  theme_bw()+
+  facet_grid(cols=vars(FOD))
+```
+
+
+
+
+
+
+
