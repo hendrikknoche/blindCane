@@ -342,4 +342,30 @@ ggplot(daggByDFR,aes(x=totalTimeTraining,y=avgTime,color=factor(Range),shape=fac
 
 
 
-doa<-daggByScen %>%group_by(day,FOD,Range)%>%summarize(Time=max(Time),speedSD=sd(avgSpeed),avgSpeed=mean(avgSpeed),maxSpeed=max(maxSpeed))
+doa<-daggByScen %>%group_by(day,FOD,Range)%>%summarize
+
+
+#TestPlot
+ggplot(daggByScenWOBL, aes(x=totalTimeTraining, y=predTime))+stat_smooth(aes(3.06479719 - 0.06523318 * log(daggByScenWOBL$totalTimeTraining)))
+
+
+
+#Incoorporating lines for totalTiming over predTime
+ggplot(daggByDFR,aes(x=totalTimeTraining,y=avgTime,color=factor(Range),shape=factor(Range)))+
+  geom_point()+ 
+  geom_smooth(size=0)+ 
+  geom_errorbar(aes(ymin=lower_ci, ymax=upper_ci))+
+  stat_smooth(method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
+  theme_bw()+geom_abline(intercept = 16.3269141950, slope = -0.0007433448)+
+  #geom_point(aes(y = objectDetected), color = "green")+
+  #stat_smooth(aes(y = objectDetected), color="green",method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
+  facet_grid(cols=vars(FOD))
+
+
+ggplot(daggByDFR, aes(x=totalTimeTraining,y=log(avgTime),color=factor(FOD)))+
+  geom_point()+
+  geom_abline(intercept = 16.0558638833, slope = -0.0007903524, color = "orange")+
+  geom_abline(intercept = 17.0533727271, slope = -0.0008007354, color = "green")+
+  geom_abline(intercept = 14.8745339314, slope = -0.0004651644, color = "lightblue")
+  #+geom_smooth(formula = 3.06479719 - 0.06523318 * log(daggByDFR$totalTimeTraining))
+
