@@ -362,10 +362,22 @@ ggplot(daggByDFR,aes(x=totalTimeTraining,y=avgTime,color=factor(Range),shape=fac
   facet_grid(cols=vars(FOD))
 
 
-ggplot(daggByDFR, aes(x=totalTimeTraining,y=log(avgTime),color=factor(FOD)))+
+ggplot(daggByDFR, aes(x=totalTimeTraining,y=avgTime,color=factor(FOD)))+
   geom_point()+
   geom_abline(intercept = 16.0558638833, slope = -0.0007903524, color = "orange")+
   geom_abline(intercept = 17.0533727271, slope = -0.0008007354, color = "green")+
   geom_abline(intercept = 14.8745339314, slope = -0.0004651644, color = "lightblue")
   #+geom_smooth(formula = 3.06479719 - 0.06523318 * log(daggByDFR$totalTimeTraining))
 
+ggplot(daggByDFR, aes(x=totalTimeTraining,y=log(avgTime),color=factor(FOD)))+    
+  geom_smooth(method = lm, se = FALSE)+
+  geom_point()
+
+ggplot(daggByDFR, aes(x=totalTimeTraining,y=log(avgTime),color=factor(FOD),group=c(factor(paste(FOD,Range)))))+    
+  geom_smooth(method = lm, se = FALSE)+
+  geom_point()
+
+#Learning over the three days combined
+ggplot(daggByDFR, aes(x=totalTimeTraining,y=log(avgTime),colour=factor(FOD),group=c(factor(paste(FOD,Range)))))+
+  stat_smooth(method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
+  geom_point()

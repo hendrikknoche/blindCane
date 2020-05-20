@@ -11,15 +11,14 @@ output:
 1. [Introduction](#introduction)
 2. [Data information](#data-information)
 3. [Predicition of course completion time](#predicition-of-course-completion-time)
-4. [Collisions per scenario](#collisions-per-scenario)
-
+4. [Collisions and Detections](#collisions-and-detections)
 
 ##Introduction (This doesent become a headline - why?)
 
 This is the statistical report associated with the paper "Evaluating the detection space" by Milo Marsfeldt Skovfoged & Alexander Schiller rasmussen. The field of study lies in research on behalf of visually impaired/blind navigation through environments to find an ideal distance and Field of Detection (FOD) for the most progressive travel-route, while avoiding collisions as much as possible.
 This report gives an overview of what data for the study was gathered and analysed, in regrads to different points of interrest.
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE,}
 library(tidyverse)
 library(readbulk)
 library(lubridate)
@@ -126,9 +125,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Data information
-Here goes the explanaion of our data in regards to what we logged and how is is structured.
-
-Below a summary of our data is presente:
+Below a summary of our data is presented. In total, a 420 tests were completed, using three different Field Of Detections (FOD), with WholeRoom and Corridor differing between three ranges (two, three and four meters). 
 ```{r first summary, echo=FALSE}
 
 summary(daggByScen)
@@ -157,7 +154,7 @@ coef(lm(Time ~ totalTimeTraining, data = corrDat))
 
 
 
-```{r , echo=FALSE, error=FALSE}
+```{r Training time over scenario time, echo=FALSE, error=FALSE, fig.height=10, fig.width=10}
 #Figure has an error
 ggplot(daggByDFR,aes(x=totalTimeTraining,y=avgTime,color=factor(Range),shape=factor(Range)))+
   geom_point()+ 
@@ -170,7 +167,7 @@ ggplot(daggByDFR,aes(x=totalTimeTraining,y=avgTime,color=factor(Range),shape=fac
 
 
 The heatmap shows the avg. speed per scenario for the different FODS with different ranges.
-```{r, HmAvgspdScen}
+```{r, HmAvgspdScen, echo=FALSE, fig.height=10, fig.width=10}
 ggplot(daggHeat, aes(x = Range, y = Scenario)) + 
   geom_tile(aes(fill = avgSpeed)) + 
   geom_text(aes(fill = daggHeat$avgSpeed, label = round(daggHeat$avgSpeed, 2))) + 
@@ -184,15 +181,64 @@ ggplot(daggHeat, aes(x = Range, y = Scenario)) +
         panel.grid.minor.y=element_blank(),
         panel.background=element_rect(fill="white"), 
         axis.text.x = element_text(angle=0, hjust = 1,vjust=1,size = 12,face = "bold"),
-        plot.title = element_text(size=20,face="bold"),
+        plot.title = element_text(size=16,face="bold"),
         axis.text.y = element_text(size = 12,face = "bold")) + 
-  ggtitle("HeatMap Over avgSpeed per Scenario") + 
-  theme(legend.title=element_text(face="bold", size=14)) + 
+  ggtitle("HeatMap - avgSpeed per Scenario") + 
+  theme(legend.title=element_text(face="bold", size=10)) + 
   scale_y_continuous(trans = "reverse")+
   labs(fill="avgSpeed") +
   facet_grid(cols=vars(FOD), row=vars(day))
 ```
 
 
-## Collisions per scenario
+## Collisions and Detections
+
+The heatmap below shows object collisions for each scenario. Noteworthy that using WholeRoom DOF, the participant managed to achieve collisions on scenario one, day one, which is supposed to be a clear walkingpath with objects spread out to the sides.
+```{r, HmColprScen, echo=FALSE, fig.height=10, fig.width=10}
+ggplot(daggHeat, aes(x = Range, y = Scenario)) + 
+  geom_tile(aes(fill = objectCollisions)) + 
+  geom_text(aes(fill = daggHeat$objectCollisions, label = round(daggHeat$objectCollisions, 2))) + 
+  scale_fill_gradient2(low = muted("green"), 
+                       mid = "yellow", 
+                       high = muted("red"), 
+                       midpoint = 4) + 
+  theme(panel.grid.major.x=element_blank(), 
+        panel.grid.minor.x=element_blank(), 
+        panel.grid.major.y=element_blank(), 
+        panel.grid.minor.y=element_blank(),
+        panel.background=element_rect(fill="white"), 
+        axis.text.x = element_text(angle=0, hjust = 1,vjust=1,size = 12,face = "bold"),
+        plot.title = element_text(size=16,face="bold"),
+        axis.text.y = element_text(size = 12,face = "bold")) + 
+  ggtitle("HeatMap - Collisions per Scenario") + 
+  theme(legend.title=element_text(face="bold", size=10)) + 
+  scale_y_continuous(trans = "reverse")+
+  labs(fill="Collisions") +
+  facet_grid(cols=vars(FOD), row=vars(day))
+```
+
+
+The heatmap below shows object detections for each scenario. Again scenario one is very noteworthy of the few detections using Corridor FOD, where the walking path is clear, compared to Wholeroom FOD.
+```{r, HmDetprScen, echo=FALSE, fig.height=10, fig.width=10}
+ggplot(daggHeat, aes(x = Range, y = Scenario)) + 
+  geom_tile(aes(fill = objectDetected)) + 
+  geom_text(aes(fill = daggHeat$objectDetected, label = round(daggHeat$objectDetected, 2))) + 
+  scale_fill_gradient2(low = muted("green"), 
+                       mid = "yellow", 
+                       high = muted("red"), 
+                       midpoint = 30) + 
+  theme(panel.grid.major.x=element_blank(), 
+        panel.grid.minor.x=element_blank(), 
+        panel.grid.major.y=element_blank(), 
+        panel.grid.minor.y=element_blank(),
+        panel.background=element_rect(fill="white"), 
+        axis.text.x = element_text(angle=0, hjust = 1,vjust=1,size = 12,face = "bold"),
+        plot.title = element_text(size=16,face="bold"),
+        axis.text.y = element_text(size = 12,face = "bold")) + 
+  ggtitle("HeatMap - Detections per Scenario") + 
+  theme(legend.title=element_text(face="bold", size=10)) + 
+  scale_y_continuous(trans = "reverse")+
+  labs(fill="Detections") +
+  facet_grid(cols=vars(FOD), row=vars(day))
+```
 
