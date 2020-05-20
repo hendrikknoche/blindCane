@@ -378,6 +378,16 @@ ggplot(daggByDFR, aes(x=totalTimeTraining,y=log(avgTime),color=factor(FOD),group
   geom_point()
 
 #Learning over the three days combined
-ggplot(daggByDFR, aes(x=totalTimeTraining,y=log(avgTime),colour=factor(FOD),group=c(factor(paste(FOD,Range)))))+
+ggplot(daggByScen, aes(x=totalTimeTraining,y=Time,colour=factor(FOD),group=c(factor(paste(FOD,Range)))))+
   stat_smooth(method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
-  geom_point()
+  geom_point()+ theme_bw()+stat_regline_equation(aes(label = paste(..eq.label..)), formula = 'y~a*x^b')
+
+
+
+
+ggplot(baseDat, aes(x=totalTimeTraining, y=Time,colour=factor(FOD),group=c(factor(paste(FOD,Range)))))+
+  stat_smooth(method = 'nls', formula = 'b*totalTimeTraining^z', method.args = list(start = list(b = 21.45979, z = -0.06329)),se=FALSE)+
+  geom_point()+ theme_bw()
+  #stat_regline_equation(aes(label = paste(..eq.label..)), formula = 'y~a*x^b')
+
+  
