@@ -206,6 +206,15 @@ corr4Datxf=cbind(corr4Datxf,Time)
 wr2Datxf=cbind(wr2Datxf,Time)
 wr3Datxf=cbind(wr3Datxf,Time)
 wr4Datxf=cbind(wr4Datxf,Time)
+
+
+#Adding labels of FOD (change according to FOD and)
+FOD = "WholeRoom"
+Range = "3"
+
+wr4Datxf=cbind(wr4Datxf,FOD)
+corr2Datxf=cbind(corr2Datxf,Range)
+corr3Datxf=cbind(corr3Datxf,Range)
 #Now feed the "dxf" (or what its called for the others) into a geom_line in the Analysis ggplot
 #ggplot(aes(dxx,dxy))
 

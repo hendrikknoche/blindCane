@@ -50,6 +50,13 @@ ggplot(daggByScen,aes(avgSpeed)) +
 ggplot(daggByScen,aes(x=Scenario,y=avgSpeed,color=FOD,size=Range))+
   geom_point(aes(alpha=.1)) 
 
+#AvgSpeed per FOD
+ggplot(daggByScen,aes(x=totalTimeTraining,y=avgSpeed,color=factor(Range)))+
+  geom_point(aes(alpha=.1))+ 
+  stat_smooth(method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
+  facet_grid(cols=vars(FOD))
+
+
 #Histogram of medianSpeed
 ggplot(daggByScen,aes(medianSpeed)) + 
   geom_histogram()+
@@ -316,6 +323,29 @@ ggplot(daggHeat, aes(x = Range, y = Scenario)) +
   labs(fill="Collisions") +
   facet_grid(cols=vars(FOD), row=vars(day))
 
+
+#Heatmap for time of completion over total trainig time
+ggplot(daggByScen, aes(x = Range, y = Scenario)) + 
+  geom_tile(aes(fill = Time)) + 
+  geom_text(aes(fill = daggByScen$Time, label = round(daggByScen$Time, 2))) + 
+  scale_fill_gradient2(low = muted("red"), 
+                       mid = "yellow", 
+                       high = muted("green"), 
+                       midpoint = 0.75) + 
+  theme(panel.grid.major.x=element_blank(), 
+        panel.grid.minor.x=element_blank(), 
+        panel.grid.major.y=element_blank(), 
+        panel.grid.minor.y=element_blank(),
+        panel.background=element_rect(fill="white"), 
+        axis.text.x = element_text(angle=0, hjust = 1,vjust=1,size = 12,face = "bold"),
+        plot.title = element_text(size=20,face="bold"),
+        axis.text.y = element_text(size = 12,face = "bold")) + 
+  ggtitle("HeatMap Over Time per Scenario") + 
+  theme(legend.title=element_text(face="bold", size=14)) + 
+  scale_y_continuous(trans = "reverse")+
+  labs(fill="Time in s") +
+  facet_grid(cols=vars(FOD), row=vars(day))
+
 #----------------------------   The effect of Training Time
 
 #Make functions
@@ -385,17 +415,30 @@ ggplot(daggByScen, aes(x=totalTimeTraining,y=Time,colour=factor(FOD),group=c(fac
 
 
 #THE GOLD - Lines for analysing Time over totalTrainingTime
-ggplot(daggByScen, aes(x=totalTimeTraining, y=Time, colour=factor(FOD)))+
+ggplot(daggByScen, aes(x=totalTimeTraining, y=Time, colour=factor(Range)))+
   geom_point()+ theme_bw()+
-  geom_line(data=baseDatxf, color="orange")+
-  geom_line(data=corr2Datxf, color="green")+
-  geom_line(data=corr3Datxf, color="green")+
-  geom_line(data=corr4Datxf, color="green")+
-  geom_line(data=wr2Datxf, color="blue")+
-  geom_line(data=wr3Datxf, color="blue")+
-  geom_line(data=wr4Datxf, color="blue")+
-  facet_grid(cols=vars(FOD))
-  
+  #stat_smooth(method = 'nls', formula = 'b*totalTimeTraining^z',)+
+  geom_line(data=baseDatxf)+
+  geom_line(data=corr2Datxf)+
+  geom_line(data=corr3Datxf)+
+  geom_line(data=corr4Datxf)+
+  geom_line(data=wr2Datxf)+
+  geom_line(data=wr3Datxf)+
+  geom_line(data=wr4Datxf)+
+  facet_grid(cols=vars(FOD))+ ylim(0,30)
+ 
 #stat_regline_equation(aes(label = paste(..eq.label..)), formula = 'y~a*x^b')
 
-  
+#THE GOLD - Gathered  REMOCE CORRIDOR DATA FROM daggByScen
+ggplot(daggByScen, aes(x=totalTimeTraining, y=Time, colour=factor(Range)))+
+  geom_point()+ theme_bw()+
+  #stat_smooth(method = 'nls', formula = 'b*totalTimeTraining^z',)+
+  geom_line(data=baseDatxf)+
+  geom_line(data=corr2Datxf)+
+  geom_line(data=corr3Datxf)+
+  geom_line(data=corr4Datxf)+
+  geom_line(data=wr2Datxf)+
+  geom_line(data=wr3Datxf)+
+  geom_line(data=wr4Datxf)+
+  facet_grid(cols=vars(FOD))+ ylim(0,30)
+
