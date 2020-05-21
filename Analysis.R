@@ -373,7 +373,7 @@ ggplot(daggByDFR, aes(x=totalTimeTraining,y=log(avgTime),color=factor(FOD)))+
   geom_smooth(method = lm, se = FALSE)+
   geom_point()
 
-ggplot(daggByDFR, aes(x=totalTimeTraining,y=log(avgTime),color=factor(FOD),group=c(factor(paste(FOD,Range)))))+    
+ggplot(daggByDFR, aes(x=totalTimeTraining,y=avgTime,color=factor(FOD),group=c(factor(paste(FOD,Range)))))+    
   geom_smooth(method = lm, se = FALSE)+
   geom_point()
 
@@ -384,10 +384,18 @@ ggplot(daggByScen, aes(x=totalTimeTraining,y=Time,colour=factor(FOD),group=c(fac
 
 
 
-
-ggplot(baseDat, aes(x=totalTimeTraining, y=Time,colour=factor(FOD),group=c(factor(paste(FOD,Range)))))+
-  stat_smooth(method = 'nls', formula = 'b*totalTimeTraining^z', method.args = list(start = list(b = 21.45979, z = -0.06329)),se=FALSE)+
-  geom_point()+ theme_bw()
-  #stat_regline_equation(aes(label = paste(..eq.label..)), formula = 'y~a*x^b')
+#THE GOLD - Lines for analysing Time over totalTrainingTime
+ggplot(daggByScen, aes(x=totalTimeTraining, y=Time, colour=factor(FOD)))+
+  geom_point()+ theme_bw()+
+  geom_line(data=baseDatxf, color="orange")+
+  geom_line(data=corr2Datxf, color="green")+
+  geom_line(data=corr3Datxf, color="green")+
+  geom_line(data=corr4Datxf, color="green")+
+  geom_line(data=wr2Datxf, color="blue")+
+  geom_line(data=wr3Datxf, color="blue")+
+  geom_line(data=wr4Datxf, color="blue")+
+  facet_grid(cols=vars(FOD))
+  
+#stat_regline_equation(aes(label = paste(..eq.label..)), formula = 'y~a*x^b')
 
   

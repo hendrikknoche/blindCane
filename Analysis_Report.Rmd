@@ -116,9 +116,55 @@ upper_ci <- function(mean, se, n, conf_level = 0.95){
 daggByDFR<-daggByScen %>%group_by(FOD,day,Range)%>%summarize(totalTimeTraining=max(totalTimeTraining),avgTime=mean(Time),ssd = sd(Time),count=n(),se = ssd / sqrt(count))%>%mutate(lower_ci=lower_ci(avgTime,se,count),upper_ci=upper_ci(avgTime,se,count))
 
 #Learning curve
+totalTimeTraining=1:6000
+#Set to summary variables 
+b=21.45979
+z= -0.06329
+#This is the Time fed into dxf
+Time<- b*totalTimeTraining^z
+baseDatxf=as.data.frame(totalTimeTraining)
+baseDatxf=cbind(baseDatxf,Time)
+
+
+ 
+b=31.32990
+z=-0.10500
+Time<- b*totalTimeTraining^z
+corr2Datxf=as.data.frame(totalTimeTraining)
+corr2Datxf=cbind(corr2Datxf,Time)
+
+b=54.72364
+z=-0.17482
+Time<- b*totalTimeTraining^z
+corr3Datxf=as.data.frame(totalTimeTraining)
+corr3Datxf=cbind(corr3Datxf,Time)
+
+b=9.81972
+z=0.03528
+Time<- b*totalTimeTraining^z
+corr4Datxf=as.data.frame(totalTimeTraining)
+corr4Datxf=cbind(corr4Datxf,Time)
 
 
 
+b=37.2835	
+z=-0.1273
+Time<- b*totalTimeTraining^z
+wr2Datxf=as.data.frame(totalTimeTraining)
+wr2Datxf=cbind(wr2Datxf,Time)
+
+b=47.50384	
+z=-0.15325
+Time<- b*totalTimeTraining^z
+wr3Datxf=as.data.frame(totalTimeTraining)
+wr3Datxf=cbind(wr3Datxf,Time)
+
+
+b=54.86090	
+z=-0.16613
+Time<- b*totalTimeTraining^z
+wr4Datxf=as.data.frame(totalTimeTraining)
+wr4Datxf=cbind(wr4Datxf,Time)
 
 
 knitr::opts_chunk$set(echo = TRUE)
@@ -163,6 +209,20 @@ ggplot(daggByDFR,aes(x=totalTimeTraining,y=avgTime,color=factor(Range),shape=fac
   stat_smooth(method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
   theme_bw()+
   facet_grid(cols=vars(FOD))
+```
+
+
+```{r Training time over scenario stretched ,echo=FALSE, error=FALSE, fig.height=10, fig.width=10}
+ggplot(daggByScen, aes(x=totalTimeTraining, y=Time, colour=factor(FOD)))+
+  geom_point()+ theme_bw()+
+  geom_line(data=baseDatxf, color="red")+
+  geom_line(data=corr2Datxf, color="green")+
+  geom_line(data=corr3Datxf, color="green")+
+  geom_line(data=corr4Datxf, color="green")+
+  geom_line(data=wr2Datxf, color="blue")+
+  geom_line(data=wr3Datxf, color="blue")+
+  geom_line(data=wr4Datxf, color="blue")
+
 ```
 
 

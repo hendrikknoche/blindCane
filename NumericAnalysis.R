@@ -79,6 +79,7 @@ mwrcDat <-lm(log(Time)~log(totalTimeTraining)+FOD*Range,data=daggByScenWOBL)
 summary(mwrcDat)
 model_equation(mwrcDat)
 
+#-DATA SPLIT STARTS HERE-------------------#
 baseDat <- daggByScen[daggByScen$FOD=="Baseline",]
 mbaseDat <- lm(log(Time)~log(totalTimeTraining),data=baseDat)
 
@@ -88,10 +89,21 @@ coef(lm(Time ~ totalTimeTraining, data = baseDat))
 
 
 wrDat <- daggByScen[daggByScen$FOD=="WholeRoom",]
+wr2Dat <- wrDat[wrDat$Range=="2",]
+wr3Dat <- wrDat[wrDat$Range=="3",]
+wr4Dat <- wrDat[wrDat$Range=="4",]
 mwrDat<- lm(log(Time)~log(totalTimeTraining),data=wrDat)
 
 model_equation(wrDat)
 coef(lm(Time ~ totalTimeTraining, data = wrDat))
+
+
+
+corrDat <- daggByScen[daggByScen$FOD=="Corridor",]
+corr2Dat <- corrDat[corrDat$Range=="2",]
+corr3Dat <- corrDat[corrDat$Range=="3",]
+corr4Dat <- corrDat[corrDat$Range=="4",]
+mcorrDat<- lm(log(Time)~log(totalTimeTraining),data=corrDat)
 
 
 
@@ -104,12 +116,7 @@ nls(density ~ 1/(1 + exp((xmid - log(conc))/scal)),
     data = DNase1,)
 
 
-
-
-corrDat <- daggByScen[daggByScen$FOD=="Corridor",]
-mcorrDat<- lm(log(Time)~log(totalTimeTraining),data=corrDat)
-
-model_equation(corrDat)
+model_equation(mcorrDat)
 coef(lm(Time ~ totalTimeTraining, data = corrDat))
 
 
@@ -119,28 +126,100 @@ z=0.4624
 dxy<- a*dxx^b
 plot(dxx,dxy)
 
+
+#BaselineDat
+summary(nls(Time ~ b*totalTimeTraining^z,
+            start = list(b = 1, z = 1),
+            data = baseDat))
+
+
+#CorridorDat
 summary(nls(Time ~ b*totalTimeTraining^z,
             start = list(b = 1, z = 1),
             data = corrDat))
 
 summary(nls(Time ~ b*totalTimeTraining^z,
             start = list(b = 1, z = 1),
+            data = corr2Dat))
+
+summary(nls(Time ~ b*totalTimeTraining^z,
+            start = list(b = 1, z = 1),
+            data = corr3Dat))
+
+summary(nls(Time ~ b*totalTimeTraining^z,
+            start = list(b = 1, z = 1),
+            data = corr4Dat))
+
+
+#WholeRoomDat
+summary(nls(Time ~ b*totalTimeTraining^z,
+            start = list(b = 1, z = 1),
             data = wrDat))
 
 summary(nls(Time ~ b*totalTimeTraining^z,
             start = list(b = 1, z = 1),
-            data = baseDat))
+            data = wr2Dat))
 
-dxx=1200:5000
+summary(nls(Time ~ b*totalTimeTraining^z,
+            start = list(b = 1, z = 1),
+            data = wr3Dat))
+
+summary(nls(Time ~ b*totalTimeTraining^z,
+            start = list(b = 1, z = 1),
+            data = wr4Dat))
+
+
+
+
+
+totalTimeTraining=1:6000
+
+#Set to summary variables 
+b=54.86090
+z=-0.16613
+
+
+#This is the Time fed into dxf
+Time<- b*totalTimeTraining^z
+#plot(dxx,dxy)
+#Make new datafram for each dataset
+dxf=as.data.frame(totalTimeTraining)
+
+baseDatxf=as.data.frame(totalTimeTraining)
+
+corr2Datxf=as.data.frame(totalTimeTraining)
+corr3Datxf=as.data.frame(totalTimeTraining)
+corr4Datxf=as.data.frame(totalTimeTraining)
+
+wr2Datxf=as.data.frame(totalTimeTraining)
+wr3Datxf=as.data.frame(totalTimeTraining)
+wr4Datxf=as.data.frame(totalTimeTraining)
+#Bind the Time to the dataset
+dxf=cbind(dxf,Time)
+
+baseDatxf=cbind(baseDatxf,Time)
+
+corr2Datxf=cbind(corr2Datxf,Time)
+corr3Datxf=cbind(corr3Datxf,Time)
+corr4Datxf=cbind(corr4Datxf,Time)
+
+wr2Datxf=cbind(wr2Datxf,Time)
+wr3Datxf=cbind(wr3Datxf,Time)
+wr4Datxf=cbind(wr4Datxf,Time)
+#Now feed the "dxf" (or what its called for the others) into a geom_line in the Analysis ggplot
+#ggplot(aes(dxx,dxy))
+
+
+b=NULL
+z=NULL
+rm(totalTimeTraining, Time)
+
+
 a<-15
-b=29
-z=-0.10
-dxy<- b*dxx^z
-ggplot(aes(dxx,dxy))
 
-
-
-
+plot(nls(Time ~ b*totalTimeTraining^z,
+         start = list(b = 29.78803, z = -0.10012),
+         data = corrDat))
 
 summary(anova(m1,m2))
 
