@@ -4,7 +4,7 @@ library(lubridate)
 library(ggplot2)
 library(scales) 
 library(magrittr)
-
+library(ggpubr)
 #Removing data
 # "rm('name of dataset')"
 #
@@ -54,8 +54,12 @@ ggplot(daggByScen,aes(x=Scenario,y=avgSpeed,color=FOD,size=Range))+
 ggplot(daggByScen,aes(x=totalTimeTraining,y=avgSpeed,color=factor(Range)))+
   geom_point(aes(alpha=.1))+ 
   stat_smooth(method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
+  #stat_regline_equation(aes(x=totalTimeTraining, y=avgSpeed))+
   facet_grid(cols=vars(FOD))
 
+summary(lm(totalTimeTraining~avgSpeed, data=daggByScen))
+
+summary(lm(totalTimeTraining~avgTime, data=daggByDFR))
 
 #Histogram of medianSpeed
 ggplot(daggByScen,aes(medianSpeed)) + 
@@ -440,5 +444,6 @@ ggplot(daggByScen, aes(x=totalTimeTraining, y=Time, colour=factor(Range)))+
   geom_line(data=wr2Datxf)+
   geom_line(data=wr3Datxf)+
   geom_line(data=wr4Datxf)+
+  #stat_regline_equation(aes(x=totalTimeTraining, y=Time))+
   facet_grid(cols=vars(FOD))+ ylim(0,30)
 
