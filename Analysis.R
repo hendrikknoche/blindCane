@@ -195,6 +195,16 @@ ggplot(daggByScen,aes(y = avgSpeed, x = objectCollisions))+
   stat_smooth(aes(x = objectDetected), color="red",method = 'nls', formula = 'y~a+x*b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
   facet_grid(cols=vars(Range), rows=vars(FOD))
 
+
+#Amount of collisions over training time
+ggplot(daggByScen,aes(x= day, y=objectCollisions, color=factor(Range)))+
+#geom_point()+
+  geom_smooth(aes(x=day, y=objectDetected))+
+  stat_smooth()+
+facet_grid(cols=vars(FOD, Range))+ 
+ylab("objectCollisions (Bottom) & objectsDetected (Top)")
+
+
 #----------------------------   Time of compleation vs avgSpeed
 
 #Number of Collisions effect on time
@@ -446,4 +456,6 @@ ggplot(daggByScen, aes(x=totalTimeTraining, y=Time, colour=factor(Range)))+
   geom_line(data=wr4Datxf)+
   #stat_regline_equation(aes(x=totalTimeTraining, y=Time))+
   facet_grid(cols=vars(FOD))+ ylim(0,30)
+
+
 

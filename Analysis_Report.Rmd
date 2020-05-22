@@ -350,6 +350,7 @@ ggplot(daggByScen, aes(x = Range, y = Scenario)) +
 
 
 \pagebreak
+
 ## Collisions and Detections
 The following table sums up the average objectCollisions and objectDectections for each FOD and respective Range, in total and over the three individual days. 
 
@@ -364,7 +365,16 @@ WholeRoom R3 |      12.53      |       1.03      |       14.05      |      12.35
 WholeRoom R4 |      12.78      |       1.03      |       14.05      |      11.2        |       13.1       |        1.15      |       1.1        |       0.85       |
 
 
-Inspecting the table, a minor noticeable difference in average detections and collisions is seen when increasing Range in FOD Wholeroom. FOD Baseline lays very close to FOD Corrdior, when looking at average detections, however, collisions seems to be one of the tradeoffs of looking only 1 meter ahead. 
+Inspecting the table, a minor noticeable difference in average detections and collisions is seen when increasing Range in FOD Wholeroom. FOD Baseline lays very close to FOD Corrdior, when looking at average detections, however, collisions seems to be one of the tradeoffs of looking only 1 meter ahead. Below a plot illustrates the above table, showing the increase and decrease of detections and collisions for each FOD with their respective ranges, over the three testing days.
+
+```{r Collisions and detections over days, echo=FALSE, message=FALSE, warning=FALSE, fig.height=10, fig.width=10}
+ggplot(daggByScen,aes(x= day, y=objectCollisions, color=factor(Range)))+
+#geom_point()+
+  geom_smooth(aes(x=day, y=objectDetected))+
+  stat_smooth()+
+facet_grid(cols=vars(FOD, Range))+ 
+ylab("objectCollisions (Bottom) & objectsDetected (Top)")
+```
 
 
 The heatmap below shows the amount of object collisions for each scenario, between differnt FOD's and Ranges. Noteworthy that using FOD WholeRoom, the participant managed to achieve collisions on scenario one, day one, which is supposed to be a clear walkingpath with objects spread out to the sides, making it difficult to collide with an object. A potential outlier also seems to be located in FOD Corridor day two scenario 20, however, further investigation would need to be conducted.
@@ -418,8 +428,7 @@ ggplot(daggHeat, aes(x = Range, y = Scenario)) +
 
 
 
-Collisions and detections also have an impact on the speed the participant moves through scenarios with. Below two graphs show that the impact of collisions as well as detections both grow while speed decreases.
-
+Collisions and detections also have an impact on the speed the participant moves through scenarios with. Below two graphs show that the impact of collisions as well as detections both moderate the speed.
 
 ```{r Collisions/DetectionsprScenario ,echo=FALSE, message=FALSE, warning=FALSE, fig.height=5, fig.width=5}
 ggplot(daggByScen,aes(y = avgSpeed, x = objectCollisions, color = factor(Range)))+
