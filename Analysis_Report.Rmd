@@ -347,22 +347,27 @@ ggplot(daggByScen, aes(x = Range, y = Scenario)) +
 
 
 
+
+
+\pagebreak
 ## Collisions and Detections
+The following table sums up the average objectCollisions and objectDectections for each FOD and respective Range, in total and over the three individual days. 
+
+FOD w. Range | Total avg. Det. | Total avg. Coll.| avg. Det. Day 1  | avg. Det. Day 2  | avg. Det. Day 3  | avg. Coll. Day 1 | avg. Coll. Day 2 | avg. Coll. Day 3 |
+-------------|-----------------|-----------------|------------------|------------------|------------------|------------------|------------------|------------------|
+Baseline  R1 |       7.26      |       1.47      |         9        |       6.3        |        6.5       |        1.4       |       1.4        |       1.6        |
+Corridor  R2 |       7.01      |       1.05      |        6.2       |       7.5        |        7.35      |        0.9       |       1.15       |       1.1        |
+Corridor  R3 |       7.95      |       1.1       |        7.5       |       8.6        |        7.75      |        1.25      |       1.1        |       0.95       |
+Corridor  R4 |       7.52      |       1.25      |        6.55      |       7.85       |        8.15      |        1.5       |       1.3        |       0.95       |
+WholeRoom R2 |       9         |       0.93      |       11.15      |       8.05       |        7.8       |        1.25      |       0.6        |       0.95       |
+WholeRoom R3 |      12.53      |       1.03      |       14.05      |      12.35       |       11.12      |        1         |       1.25       |       0.85       |
+WholeRoom R4 |      12.78      |       1.03      |       14.05      |      11.2        |       13.1       |        1.15      |       1.1        |       0.85       |
 
 
-FOD w. Range | Detections | Collisions |
--------------|------------|------------|
-Baseline     |    7.26    |    1.47    |
-Corridor R2  |    7.01    |    1.05    |
-Corridor R3  |    7.95    |    1.1     |
-Corridor R4  |    7.52    |    1.25    |
-WholeRoom R2 |     9      |    0.93    |
-WholeRoom R3 |   12.53    |    1.03    |
-WholeRoom R4 |   12.78    |    1.03    |
+Inspecting the table, a minor noticeable difference in average detections and collisions is seen when increasing Range in FOD Wholeroom. FOD Baseline lays very close to FOD Corrdior, when looking at average detections, however, collisions seems to be one of the tradeoffs of looking only 1 meter ahead. 
 
 
-
-The heatmap below shows the amount of object collisions for each scenario, between differnt FOD's and Ranges. Noteworthy that using DOF WholeRoom, the participant managed to achieve collisions on scenario one, day one, which is supposed to be a clear walkingpath with objects spread out to the sides, making it difficult to collide with an object. A potential outlier also seems to be located in DOF Corridor day two scenario 20, however, further investigation would need to be conducted.
+The heatmap below shows the amount of object collisions for each scenario, between differnt FOD's and Ranges. Noteworthy that using FOD WholeRoom, the participant managed to achieve collisions on scenario one, day one, which is supposed to be a clear walkingpath with objects spread out to the sides, making it difficult to collide with an object. A potential outlier also seems to be located in FOD Corridor day two scenario 20, however, further investigation would need to be conducted.
 ```{r, HmCollprScen, echo=FALSE, message=FALSE, warning=FALSE, fig.height=10, fig.width=10}
 ggplot(daggHeat, aes(x = Range, y = Scenario)) + 
   geom_tile(aes(fill = objectCollisions)) + 
