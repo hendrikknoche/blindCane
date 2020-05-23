@@ -345,10 +345,6 @@ ggplot(daggByScen, aes(x = Range, y = Scenario)) +
 ```
 
 
-
-
-
-
 \pagebreak
 
 ## Collisions and Detections
@@ -365,7 +361,106 @@ WholeRoom R3 |      12.53      |       1.03      |       14.05      |      12.35
 WholeRoom R4 |      12.78      |       1.03      |       14.05      |      11.2        |       13.1       |        1.15      |       1.1        |       0.85       |
 
 
-Inspecting the table, a minor noticeable difference in average detections and collisions is seen when increasing Range in FOD Wholeroom. FOD Baseline lays very close to FOD Corrdior, when looking at average detections, however, collisions seems to be one of the tradeoffs of looking only 1 meter ahead. Below a plot illustrates the above table, showing the increase and decrease of detections and collisions for each FOD with their respective ranges, over the three testing days.
+Inspecting the table, a minor noticeable difference in average detections and collisions is seen when increasing Range in FOD Wholeroom. FOD Baseline lays very close to FOD Corrdior, when looking at average detections, however, collisions seem to be one of the tradeoffs of looking only one meter ahead. 
+P-values were calculated using anova-tests for each FOD and it's respective ranges, and for comparing the baseline to the other FOD's as an average, since the baseline does not have multiple ranges.
+
+
+#Cannot do this - no diif. in Range---------------------------------
+###### Corridor objectCollisions p-value
+```{r Anova_objectColl. over Range: Corrdior, echo=FALSE, message=FALSE, warning=FALSE}
+anova(lm(Range ~ objectCollisions ,data=corrDat,))
+```
+
+
+###### WholeRoom objectCollisions p-value
+```{r Anova_objectColl. over Range: Wholeroom, echo=FALSE, message=FALSE, warning=FALSE}
+anova(lm(Range ~ objectCollisions ,data=wrDat))
+```
+
+
+###### Baseline vs Corridor objectCollisions p-value
+```{r Anova_objectColl. over Range: Baseline vs Corridor, echo=FALSE, message=FALSE, warning=FALSE}
+anova(lm(Range ~ objectCollisions ,data=daggByScenWOBLW))
+```
+
+
+###### Baseline vs WholeRoom objectCollisions p-value
+```{r Anova_objectColl. over Range: Baseline vs WholeRoom, echo=FALSE, message=FALSE, warning=FALSE}
+anova(lm(Range ~ objectCollisions ,data=daggByScenWOBLC))
+```
+
+
+###### Corridor vs WholeRoom objectCollisions p-value
+```{r Anova_objectColl. over Range: Baseline vs WholeRoom, echo=FALSE, message=FALSE, warning=FALSE}
+anova(lm(Range ~ objectCollisions ,data=daggByScenWOBL))
+```
+
+
+
+###### Cross compairison objectCollisions p-value
+```{r Anova_objectColl. over Range: All, echo=FALSE, message=FALSE, warning=FALSE}
+## BaseDat cannot because only one length
+## Therefore, basedat has to be compared to the others
+anova(lm(Range ~ objectCollisions ,data=daggByScen))
+```
+
+
+
+
+
+#Cannot do this - no diif. in Range---------------------------------
+###### Corridor objectDetected p-value
+```{r Anova_objectDetec. over Range: Corridor, echo=FALSE, message=FALSE, warning=FALSE}
+anova(lm(Range ~ objectDetected ,data=corrDat))
+```
+
+###### WholeRoom objectDetected p-value
+```{r Anova_objectDetec. over Range: WholeRoom, echo=FALSE, message=FALSE, warning=FALSE}
+anova(lm(Range ~ objectDetected ,data=wrDat))
+```
+
+
+###### Baseline vs Corridor objectDetected p-value
+```{r Anova_objectColl. over Range: Baseline vs Corridor, echo=FALSE, message=FALSE, warning=FALSE}
+anova(lm(Range ~ objectDetected ,data=daggByScenWOBLW))
+```
+
+
+###### Baseline vs WholeRoom objectDetected p-value
+```{r Anova_objectColl. over Range: Baseline vs WholeRoom, echo=FALSE, message=FALSE, warning=FALSE}
+anova(lm(Range ~ objectDetected ,data=daggByScenWOBLC))
+```
+
+
+###### Corridor vs WholeRoom objectDetected p-value
+```{r Anova_objectColl. over Range: Baseline vs WholeRoom, echo=FALSE, message=FALSE, warning=FALSE}
+anova(lm(Range ~ objectDetected ,data=daggByScenWOBL))
+```
+
+
+
+###### Cross compairison objectDetections p-value
+```{r Anova_objectDetec. over Range: All: Corridor, echo=FALSE, message=FALSE, warning=FALSE}
+anova(lm(Range ~ objectDetected ,data=daggByScen))
+```
+
+
+Running anova-tests across the individual FOD's and across, we see that 
+
+ 
+FOD                                | p-value avg. Detec. | p-value avg. Coll.| 
+-----------------------------------|---------------------|-------------------| 
+Corridor                           |        0.4105       |       0.2899      | 
+WholeRoom                          |        0.0003019    |       0.5638      | 
+Corridor vs. WholeRoom             |        1.548e-10    |       0.2414      |
+Baseline vs. Corridor              |        0.393        |       0.3208      |
+Baseline vs. WholeRoom             |        1.548e-10    |       0.03569     |
+Baseline vs. Corridor vs. WholeRoom|        0.001133     |       0.2772      |
+
+
+
+
+Below a plot illustrates the above table, showing the increase and decrease of detections and collisions for each FOD with their respective ranges, over the three testing days.
 
 ```{r Collisions and detections over days, echo=FALSE, message=FALSE, warning=FALSE, fig.height=10, fig.width=10}
 ggplot(daggByScen,aes(x= day, y=objectCollisions, color=factor(Range)))+
@@ -493,4 +588,4 @@ ggplot(daggHeat, aes(x = Range, y = Scenario)) +
 
 
 
-##Analysis conclusion
+## Analysis conclusion

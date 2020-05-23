@@ -67,6 +67,9 @@ CorrVsWR4m <- df %>%
   summarize(objectCollisions = sum(objColl, na.rm = TRUE), objectDetected = sum(objDet, na.rm = TRUE), Range = mean(Range), Time = max(Time_in_MS * 1000))
 
 daggByScenWOBL<-daggByScen[!daggByScen$FOD=="Baseline",]
+daggByScenWOBLC<-daggByScen[!daggByScen$FOD=="Corridor",]
+daggByScenWOBLW<-daggByScen[!daggByScen$FOD=="WholeRoom",]
+
 m1<-lm(log(Time)~FOD*Range+totalTimeTraining,data=daggByScen)
 
 m2<-lm(log(Time)~FOD*log(Range)+log(totalTimeTraining),data=daggByScen)
@@ -282,7 +285,7 @@ anova(lm(Scenario ~ objectCollisions, data = dataCorridor4m))
 
 
 # Corridor vs WholeRoom - difference between collisions per scenario
-anova(lm(Scenario ~ objectCollisions, data = CorrVsWR2m))
+anova(lm(Scenario ~ objectCollisions, data = corr2Dat))
 
 anova(lm(Scenario ~ objectCollisions, data = CorrVsWR3m))
 
@@ -300,3 +303,22 @@ anova(lm(Range ~ objectCollisions, data = CorrVsWR4m))
 
 
 anova(lm(Scenario ~ objectCollisions, data = BVsCorrVsWHoleRoom2m))
+
+
+
+#--------------------------------Actual usefull numbers--------------------------------
+
+#BaseDat cannot because only one length
+anova(lm(Range ~ objectCollisions ,data=baseDat))
+
+anova(lm(Range ~ objectCollisions ,data=corrDat))
+
+anova(lm(Range ~ objectCollisions ,data=wrDat))
+
+#Therefore, basedat has to be compared to the others
+
+anova(lm(Range ~ objectCollisions ,data=daggByScen))
+
+
+
+

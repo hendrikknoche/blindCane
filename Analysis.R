@@ -266,6 +266,16 @@ ggplot(daggByScen,aes(x = totalTimeTraining, y = Time, color = factor(Range)))+
 ggplot(daggByScen,aes(x=FOD,y=Time,color=Range))+
   geom_point(aes(alpha=.1))
 
+
+
+ggplot(daggByScenWOBL, aes(x=Range, y=objectCollisions, color=Range))+
+  #geom_point()+
+  stat_smooth()+
+  #lm(FOD~objectCollisions, data=daggByScen)+
+  facet_grid(cols=vars(FOD))
+
+
+
 #----------------------------   Heatmap Table
 
 #Data Frame for heatmap table
@@ -456,6 +466,4 @@ ggplot(daggByScen, aes(x=totalTimeTraining, y=Time, colour=factor(Range)))+
   geom_line(data=wr4Datxf)+
   #stat_regline_equation(aes(x=totalTimeTraining, y=Time))+
   facet_grid(cols=vars(FOD))+ ylim(0,30)
-
-
-
+  
