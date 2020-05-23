@@ -308,13 +308,38 @@ anova(lm(Scenario ~ objectCollisions, data = BVsCorrVsWHoleRoom2m))
 
 #--------------------------------Actual usefull numbers--------------------------------
 
+#Understanding the data
+plot(density(daggByScen$avgSpeed))
+plot(density(daggByScen$Time))
+plot(density(daggByScen$totalTimeTraining))
+plot(density(daggByScen$avgSpeed))
+
+
+lm(log(Time)~FOD*Range,data=daggByScen)
+
+plot(lm(log(Time)~FOD*Range,data=daggByScen))
+
+plot(lm(log(Time)~FOD*Range+log(Time),data=daggByScen))
+
+plot(lm(log(Time)~FOD*Range+totalTimeTraining,data=daggByScen))
+
+
+
 #BaseDat cannot because only one length
 anova(lm(Range ~ objectCollisions ,data=baseDat))
 
-summary(glm(objectCollisions ~ Range*FOD +totalTimeTraining ,family="poisson",data=AllTheData))
+summary(glm(objectCollisions ~ Range*FOD +totalTimeTraining ,family="poisson",data=daggByScen))
+summary(glm(objectDetected ~ Range*FOD +totalTimeTraining ,family="poisson",data=daggByScen))
+
+summary(glm(objectCollisions ~ Range +totalTimeTraining,family="poisson",data=corrDat))
 summary(glm(objectCollisions ~ Range +totalTimeTraining,family="poisson",data=wrDat))
 summary(glm(objectDetected ~ Range+totalTimeTraining  ,family="poisson",data=corrDat))
 summary(glm(objectDetected ~ Range+totalTimeTraining ,family="poisson",data=wrDat))
+
+
+
+
+
 #the below should not work
 anova(lm(objectCollisions ~  Range,data=wrDat))
 

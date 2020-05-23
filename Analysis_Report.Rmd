@@ -90,6 +90,8 @@ test<-daggByScen %>%
 
 #WOBBL removes the baseline from the data and leaves us with Whole-room and Corridor
 daggByScenWOBL<-daggByScen[!daggByScen$FOD=="Baseline",]
+daggByScenWOBLC<-daggByScen[!daggByScen$FOD=="Corridor",]
+daggByScenWOBLW<-daggByScen[!daggByScen$FOD=="WholeRoom",]
 m<-lm(Time~FOD*Range+totalTimeTraining,data=daggByScen[!daggByScen$FOD=="Baseline",])
 summary(m)
 model_equation(m)
@@ -391,7 +393,7 @@ anova(lm(Range ~ objectCollisions ,data=daggByScenWOBLC))
 
 
 ###### Corridor vs WholeRoom objectCollisions p-value
-```{r Anova_objectColl. over Range: Baseline vs WholeRoom, echo=FALSE, message=FALSE, warning=FALSE}
+```{r Anova_objectColl. over Range: Corridor vs WholeRoom, echo=FALSE, message=FALSE, warning=FALSE}
 anova(lm(Range ~ objectCollisions ,data=daggByScenWOBL))
 ```
 
@@ -421,19 +423,19 @@ anova(lm(Range ~ objectDetected ,data=wrDat))
 
 
 ###### Baseline vs Corridor objectDetected p-value
-```{r Anova_objectColl. over Range: Baseline vs Corridor, echo=FALSE, message=FALSE, warning=FALSE}
+```{r Anova_objectDetec. over Range: Baseline vs Corridor, echo=FALSE, message=FALSE, warning=FALSE}
 anova(lm(Range ~ objectDetected ,data=daggByScenWOBLW))
 ```
 
 
 ###### Baseline vs WholeRoom objectDetected p-value
-```{r Anova_objectColl. over Range: Baseline vs WholeRoom, echo=FALSE, message=FALSE, warning=FALSE}
+```{r Anova_objectDetec. over Range: Baseline vs WholeRoom, echo=FALSE, message=FALSE, warning=FALSE}
 anova(lm(Range ~ objectDetected ,data=daggByScenWOBLC))
 ```
 
 
 ###### Corridor vs WholeRoom objectDetected p-value
-```{r Anova_objectColl. over Range: Baseline vs WholeRoom, echo=FALSE, message=FALSE, warning=FALSE}
+```{r Anova_objectDetec. over Range: Corridor vs WholeRoom, echo=FALSE, message=FALSE, warning=FALSE}
 anova(lm(Range ~ objectDetected ,data=daggByScenWOBL))
 ```
 
@@ -445,17 +447,23 @@ anova(lm(Range ~ objectDetected ,data=daggByScen))
 ```
 
 
+
+
+
+
+
+
 Running anova-tests across the individual FOD's and across, we see that 
 
  
 FOD                                | p-value avg. Detec. | p-value avg. Coll.| 
 -----------------------------------|---------------------|-------------------| 
-Corridor                           |        0.4105       |       0.2899      | 
-WholeRoom                          |        0.0003019    |       0.5638      | 
-Corridor vs. WholeRoom             |        1.548e-10    |       0.2414      |
-Baseline vs. Corridor              |        0.393        |       0.3208      |
-Baseline vs. WholeRoom             |        1.548e-10    |       0.03569     |
-Baseline vs. Corridor vs. WholeRoom|        0.001133     |       0.2772      |
+Corridor                           |       0.4105        |       0.2899      | 
+WholeRoom                          |       0.0003019     |       0.5638      | 
+Corridor vs. WholeRoom             |       0.001133      |       0.2414      |
+Baseline vs. Corridor              |       0.393         |       0.3208      |
+Baseline vs. WholeRoom             |       0.001133      |       0.03569     |
+Baseline vs. Corridor vs. WholeRoom|       0.001133      |       0.2772      |
 
 
 
@@ -552,7 +560,7 @@ ggplot(daggByScen,aes(y = avgSpeed, x = objectDetected, color = factor(Range)))+
 
 
 Noteworthy, compared to the time it takes to complete a scenario over training time (as presented earlier), DOF Corridor with a Range of three meters becomes the fastest of the FOD Corridor Ranges on day three. However, looking at the average speed (as shown in the plot below), the corridor with a Range of two meters has a faster walking speed. This yields that a faster walking speed does not necessary mean a faster completion time.
-```{r ,}
+```{r Average speed over training time, echo=FALSE, message=FALSE, warning=FALSE, fig.height=10, fig.width=10}
 ggplot(daggByScen,aes(x=totalTimeTraining,y=avgSpeed,color=factor(Range)))+
   geom_point(aes(alpha=.1))+ 
   stat_smooth(method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
