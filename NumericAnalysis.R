@@ -311,9 +311,12 @@ anova(lm(Scenario ~ objectCollisions, data = BVsCorrVsWHoleRoom2m))
 #BaseDat cannot because only one length
 anova(lm(Range ~ objectCollisions ,data=baseDat))
 
-anova(lm(Range ~ objectCollisions ,data=corrDat))
-
-anova(lm(Range ~ objectCollisions ,data=wrDat))
+summary(glm(objectCollisions ~ Range*FOD +totalTimeTraining ,family="poisson",data=AllTheData))
+summary(glm(objectCollisions ~ Range +totalTimeTraining,family="poisson",data=wrDat))
+summary(glm(objectDetected ~ Range+totalTimeTraining  ,family="poisson",data=corrDat))
+summary(glm(objectDetected ~ Range+totalTimeTraining ,family="poisson",data=wrDat))
+#the below should not work
+anova(lm(objectCollisions ~  Range,data=wrDat))
 
 #Therefore, basedat has to be compared to the others
 
