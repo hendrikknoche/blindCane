@@ -275,6 +275,13 @@ ggplot(daggByScenWOBL, aes(x=Range, y=objectCollisions, color=Range))+
   facet_grid(cols=vars(FOD))
 
 
+ggplot(daggByScenWOBL, aes(x=Range, y=objectDetected, color=Range))+
+  #geom_point()+
+  stat_smooth()+
+  #lm(FOD~objectCollisions, data=daggByScen)+
+  facet_grid(cols=vars(FOD))
+
+
 
 #----------------------------   Heatmap Table
 

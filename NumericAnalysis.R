@@ -307,22 +307,39 @@ anova(lm(Scenario ~ objectCollisions, data = BVsCorrVsWHoleRoom2m))
 
 
 #--------------------------------Actual usefull numbers--------------------------------
+#Testdata where totalTrainingTime is added in minutes to make the coefficients more readable
+TESTdaggByScen <- daggByScen
+totalTimeTrainingMin <- TESTdaggByScen$totalTimeTraining/60
+totalTimeTrainingMin <- as.data.frame(totalTimeTrainingMin)
+TESTdaggByScen=cbind(TESTdaggByScen, totalTimeTrainingMin)
+
+#Summaries to compare the effect of totalTrainingTime in seconds (top) and in minutes (bottom)
+summary(glm(objectDetected ~ Range*FOD +totalTimeTraining ,family="poisson",data=daggByScen))
+summary(glm(objectDetected ~ Range*FOD +totalTimeTrainingMin ,family="poisson",data=TESTdaggByScen))
+
+rm(TESTdaggByScen, TTTMindaggByScen)
 
 #Understanding the data
 plot(density(daggByScen$avgSpeed))
 plot(density(daggByScen$Time))
 plot(density(daggByScen$totalTimeTraining))
-plot(density(daggByScen$avgSpeed))
+plot(density(daggByDFR$avgTime))
+plot(density(daggByScen$objectCollisions))
+plot(density(daggByScen$objectDetected))
+
 
 
 lm(log(Time)~FOD*Range,data=daggByScen)
 
 plot(lm(log(Time)~FOD*Range,data=daggByScen))
 
-plot(lm(log(Time)~FOD*Range+log(Time),data=daggByScen))
+plot(lm(log(Time)~FOD*Range+Time,data=daggByScen))
 
 plot(lm(log(Time)~FOD*Range+totalTimeTraining,data=daggByScen))
 
+density(x=Time, y= totalTimeTraining, data=daggByScen)
+
+t.test(objectDetected ~ totalTimeTraining, data=daggByScen)
 
 
 #BaseDat cannot because only one length
@@ -333,10 +350,12 @@ summary(glm(objectDetected ~ Range*FOD +totalTimeTraining ,family="poisson",data
 
 summary(glm(objectCollisions ~ Range +totalTimeTraining,family="poisson",data=corrDat))
 summary(glm(objectCollisions ~ Range +totalTimeTraining,family="poisson",data=wrDat))
+
 summary(glm(objectDetected ~ Range+totalTimeTraining  ,family="poisson",data=corrDat))
-summary(glm(objectDetected ~ Range+totalTimeTraining ,family="poisson",data=wrDat))
+summary(lm(objectDetected ~ Range+totalTimeTraining ,family="poisson",data=wrDat))
 
 
+summary(glm(objectDetected ~ Range*FOD +totalTimeTraining ,family="poisson",data=daggByScen))
 
 
 
@@ -348,5 +367,8 @@ anova(lm(objectCollisions ~  Range,data=wrDat))
 anova(lm(Range ~ objectCollisions ,data=daggByScen))
 
 
+
+#---------The effect of Range---------#
+summary(glm(objectCollisions ~ Range +totalTimeTraining,family="poisson",data=daggByScen))
 
 
