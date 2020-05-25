@@ -475,7 +475,7 @@ ggplot(daggByScen,aes(x= day, y=objectCollisions, color=factor(Range)))+
 #geom_point()+
   geom_smooth(aes(x=day, y=objectDetected))+
   stat_smooth()+
-facet_grid(cols=vars(FOD, Range))+ 
+facet_grid(cols=vars(FOD))+ 
 ylab("objectCollisions (Bottom) & objectsDetected (Top)")
 ```
 

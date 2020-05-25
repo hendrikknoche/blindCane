@@ -25,7 +25,7 @@ daggByScen <- daggByScen%>%group_by(FOD,day,Range)%>%mutate(timeFDRtrain=round(c
 daggByScen <- daggByScen%>%group_by(FOD,day)%>%mutate(timeFDtrain=round(cumsum(Time)))
 
 #add Coloum with total time spent for a given Day
-daggByScen <- daggByScen%>%group_by(day)%>%mutate(timeDtrain=round(cumsum(Time)))
+daggByScen <- daggByScen%>%group_by(day)%>%mutate(timeDtrain=round(cumsum(Time)),totalTimeTrainingHrs=totalTimeTraining/3600)
 daggByCol <- df %>% filter(Person_Speed<3)%>%group_by(testID,day,Scenario,FOD,Range,objColl)%>%summarize(avgSpeed=mean(Person_Speed),medianSpeed=median(Person_Speed),maxSpeed=max(Person_Speed),minSpeed=min(Person_Speed),objectDetected=sum(objDet,na.rm = TRUE),objectCollisions=sum(objColl,na.rm = TRUE),Time=max(Time_in_MS*1000))%>% arrange(testID)
 
 
@@ -474,3 +474,18 @@ ggplot(daggByScen, aes(x=totalTimeTraining, y=Time, colour=factor(Range)))+
   #stat_regline_equation(aes(x=totalTimeTraining, y=Time))+
   facet_grid(cols=vars(FOD))+ ylim(0,30)
   
+
+
+
+ggplot(daggByScen, aes(x=day, y=objectDetected))+ 
+  geom_bar(position=position_dodge(), stat="identity",
+           colour="black", # Use black outlines,
+           size=.3)+      # Thinner lines
+  xlab("Days") +
+  ylab("objectDetections") +
+  scale_fill_hue(name="Supplement type", # Legend label, use darker colors
+                 breaks=c("OJ", "VC"),
+                 labels=c("Orange juice", "Ascorbic acid"))+
+  ggtitle("ReEeEeEeeEEEeeE")+
+  scale_y_continuous(breaks=0:20*4) +
+  theme_bw()

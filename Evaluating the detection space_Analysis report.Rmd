@@ -29,6 +29,7 @@ library(ggplot2)
 library(scales) 
 library(magrittr)
 library(knitr)
+library("car")
 
 #GetData
 load('data_all.rda')
@@ -46,7 +47,7 @@ daggByScen <- daggByScen%>%group_by(FOD,day,Range)%>%mutate(timeFDRtrain=round(c
 daggByScen <- daggByScen%>%group_by(FOD,day)%>%mutate(timeFDtrain=round(cumsum(Time)))
 
 #add Coloum with total time spent for a given Day
-daggByScen <- daggByScen%>%group_by(day)%>%mutate(timeDtrain=round(cumsum(Time)))
+daggByScen <- daggByScen%>%group_by(day)%>%mutate(timeDtrain=round(cumsum(Time)),totalTimeTrainingHrs=totalTimeTraining/3600)
 daggByCol <- df %>% filter(Person_Speed<3)%>%group_by(testID,day,Scenario,FOD,Range,objColl)%>%summarize(avgSpeed=mean(Person_Speed),medianSpeed=median(Person_Speed),maxSpeed=max(Person_Speed),minSpeed=min(Person_Speed),objectDetected=sum(objDet,na.rm = TRUE),objectCollisions=sum(objColl,na.rm = TRUE),Time=max(Time_in_MS*1000))%>% arrange(testID)
 
 
@@ -211,79 +212,86 @@ summary(daggByScen)
 #Shows a table of the data (e.g. could be the coefficients for completion time to FOD compairson)
 ```
 
+To test for normality in our data, we conducted a Shapiro Wilks test
+
+```{r Normality check, echo=FALSE}
+shapiro.test(daggByScen$avgSpeed)
+
+shapiro.test(daggByScen$objectDetected)
+
+shapiro.test(daggByScen$objectCollisions)
+```
+and illustrated the data in qq-plots for a better overview.
+
+```{r Normality plots, echo=FALSE}
+qqPlot(daggByScen$avgSpeed)
+qqPlot(daggByScen$objectDetected)
+qqPlot(daggByScen$objectCollisions)
+qqPlot(daggByScen$Time)
+```
+
+The p-values show a significant difference and thereby rejects the nullhypothesis of the data follows a normal distributed. For analysing the results further we will be using glm models wiht a Poisson distribution.
 
 
 
 
+##Walking speed
 
-
-##Normal aEMA
-
-
-######Walking speed
+######Wholeroom
 ```{r Normal aEMA Spd., echo=FALSE}
-summary(lm(avgSpeed ~ Range+log(totalTimeTraining), data=wrDat))
+summary(lm(avgSpeed ~ Range+totalTimeTrainingHrs, data=wrDat))
 ```
 
-
-######Objects detected
-```{r Normal aEMA Det., echo=FALSE}
-summary(lm(objectDetected ~ Range+log(totalTimeTraining), data=wrDat))
-```
-
-
-######Collisions 
-```{r Normal aEMA Coll., echo=FALSE}
-summary(glm(objectCollisions ~ Range+log(totalTimeTraining)  ,family="poisson",data=wrDat))
-```
-
-
-
-
-##Body-preview aEMA
-
-######Objects detected
-```{r Body-pr. aEMA Det., echo=FALSE}
-summary(lm(objectDetected ~ Range+log(totalTimeTraining), data=corrDat))
-```
-
-
-######Walking speed
+######Corridor
 ```{r Body-pr. aEMA Spd., echo=FALSE}
-summary(lm(avgSpeed ~ Range+log(totalTimeTraining), data=corrDat))
+summary(lm(avgSpeed ~ Range+totalTimeTrainingHrs,data=corrDat))
 ```
 
 
-######Collisions 
-```{r Body-pr. aEMA Coll., echo=FALSE}
-summary(glm(objectCollisions ~ Range+log(totalTimeTraining)  ,family="poisson",data=corrDat))
-```
-
-
-
-
-##Baseline vs. aEMA
-
-
-
-######Objects detected
-```{r Baseline/aEMA Det., echo=FALSE}
-summary(lm(objectDetected ~ FOD + log(totalTimeTraining) ,family="poisson",data=daggByScen))
-```
-
-
-######Walking speed
+######AllData
 ```{r Baseline/aEMA Spd., echo=FALSE}
-summary(lm(avgSpeed ~ FOD + log(totalTimeTraining) ,family="poisson",data=daggByScen))
+summary(lm(avgSpeed ~ FOD + totalTimeTrainingHrs, data=daggByScen))
 ```
 
 
-######Collisions 
+
+##Object detections
+
+######Wholeroom
+```{r Normal aEMA Det., echo=FALSE}
+summary(glm(objectDetected ~ Range + totalTimeTrainingHrs, family="poisson", data=wrDat))
+```
+
+######Corridor
+```{r Body-pr. aEMA Det., echo=FALSE}
+summary(glm(objectDetected ~ Range+totalTimeTrainingHrs, family="poisson",data=corrDat))
+```
+
+
+######AllData
+```{r Baseline/aEMA Det., echo=FALSE}
+summary(glm(objectDetected ~ FOD + totalTimeTrainingHrs, family="poisson",data=daggByScen))
+```
+
+
+
+##Object collisions
+
+######Wholeroom
+```{r Normal aEMA Coll., echo=FALSE}
+summary(glm(objectCollisions ~ Range+totalTimeTrainingHrs, family="poisson",data=wrDat))
+```
+
+######Corridor 
+```{r Body-pr. aEMA Coll., echo=FALSE}
+summary(glm(objectCollisions ~ Range+totalTimeTrainingHrs ,family="poisson",data=corrDat))
+```
+
+
+######Alldata
 ```{r Baseline/aEMA Coll., echo=FALSE}
-summary(glm(objectCollisions ~ FOD + log(totalTimeTraining) ,family="poisson",data=daggByScen))
+summary(glm(objectCollisions ~ FOD + totalTimeTrainingHrs ,family="poisson",data=daggByScen))
 ```
-
-
 
 
 

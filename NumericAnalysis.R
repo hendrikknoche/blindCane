@@ -365,6 +365,8 @@ summary(glm(objectCollisions ~ Range +totalTimeTraining,family="poisson",data=co
 summary(glm(objectCollisions ~ Range +totalTimeTraining,family="poisson",data=wrDat))
 
 summary(glm(objectDetected ~ Range+totalTimeTraining  ,family="poisson",data=corrDat))
+
+
 summary(lm(objectDetected ~ Range+totalTimeTraining ,family="poisson",data=wrDat))
 
 
@@ -382,7 +384,7 @@ summary(lm(objectDetected ~ Range*FOD +log(totalTimeTraining) ,family="poisson",
 
 
 
-
+summary(lm(objectCollisions~Time,data=daggByScen))
 
 
 #the below should not work
