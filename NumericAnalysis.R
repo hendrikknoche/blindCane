@@ -326,7 +326,7 @@ plot(density(daggByScen$totalTimeTraining))
 plot(density(daggByDFR$avgTime))
 plot(density(daggByScen$objectCollisions))
 plot(density(daggByScen$objectDetected))
-
+plot(density(daggByScen$avgSpeed))
 
 
 lm(log(Time)~FOD*Range,data=daggByScen)
@@ -346,7 +346,20 @@ t.test(objectDetected ~ totalTimeTraining, data=daggByScen)
 anova(lm(Range ~ objectCollisions ,data=baseDat))
 
 summary(glm(objectCollisions ~ Range*FOD +totalTimeTraining ,family="poisson",data=daggByScen))
-summary(glm(objectDetected ~ Range*FOD +totalTimeTraining ,family="poisson",data=daggByScen))
+
+#baseline FOD compare
+summary(lm(objectDetected ~ FOD + log(totalTimeTraining) ,family="poisson",data=daggByScen))
+
+summary(lm(avgSpeed ~ FOD + log(totalTimeTraining) ,family="poisson",data=daggByScen))
+
+summary(glm(objectCollisions ~ FOD + log(totalTimeTraining) ,family="poisson",data=daggByScen))
+
+
+
+
+summary(lm(avgSpeed ~ FOD + log(totalTimeTraining) ,family="poisson",data=daggByScenWOBL))
+#---------
+
 
 summary(glm(objectCollisions ~ Range +totalTimeTraining,family="poisson",data=corrDat))
 summary(glm(objectCollisions ~ Range +totalTimeTraining,family="poisson",data=wrDat))
@@ -355,7 +368,20 @@ summary(glm(objectDetected ~ Range+totalTimeTraining  ,family="poisson",data=cor
 summary(lm(objectDetected ~ Range+totalTimeTraining ,family="poisson",data=wrDat))
 
 
-summary(glm(objectDetected ~ Range*FOD +totalTimeTraining ,family="poisson",data=daggByScen))
+
+summary(lm(objectDetected ~ Range*FOD +totalTimeTraining ,family="poisson",data=daggByScen))
+
+summary(lm(objectDetected ~ Range +totalTimeTraining, data=wrDat))
+
+
+
+
+summary(lm(objectDetected ~ Range+totalTimeTraining  ,family="poisson",data=wrDat))
+
+summary(lm(objectDetected ~ Range*FOD +log(totalTimeTraining) ,family="poisson",data=daggByScen))
+
+
+
 
 
 

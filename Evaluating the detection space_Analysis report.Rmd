@@ -1,0 +1,294 @@
+---
+title: "Evaluating the detection space_Analysis report"
+author: "Milo Marsfeldt Skovfoged & Alexander Schiller Rasmussen"
+date: "25/5/2020"
+output: pdf_document
+---
+
+1. [Introduction](#introduction)
+2. [Data information](#data-information)
+3. [Predicition of course completion time](#predicition-of-course-completion-time)
+
+4. [Normal aEMA](#normal-aema)
+5. [Body-preview aEMA](#body-preview-aema)
+6. [Baseline vs. aEMA](#baseline-vs.-aema)
+
+7. [Analysis conclusion](#analysis-conclusion)
+
+
+
+## Introduction
+This is the statistical report associated with the paper "Evaluating the detection space" by Milo Marsfeldt Skovfoged & Alexander Schiller Rasmussen. The field of study lies in researching visually impaired/blind navigation through environments, to find an ideal Range of looking ahead and Field of Detection (FOD), for the most progressive travel-route, while avoiding collisions as much as possible.
+This report gives an overview of what data was gathered and analysed, in regrads to different points of interrest.
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(readbulk)
+library(lubridate)
+library(ggplot2)
+library(scales) 
+library(magrittr)
+library(knitr)
+
+#GetData
+load('data_all.rda')
+
+#Data Grouped by Snario
+daggByScen <- df %>% filter(Person_Speed<3)%>%group_by(testID,day,Scenario,FOD,Range)%>%summarize(avgSpeed=mean(Person_Speed),medianSpeed=median(Person_Speed),maxSpeed=max(Person_Speed),minSpeed=min(Person_Speed),objectDetected=sum(objDet,na.rm = TRUE),objectCollisions=sum(objColl,na.rm = TRUE),Time=max(Time_in_MS*1000))%>% arrange(testID)
+
+#add Coloum with sum of total time spent 
+daggByScen$totalTimeTraining<-round(cumsum(daggByScen$Time))
+
+#add Coloum with total time spent for a given FOD with a given Range
+daggByScen <- daggByScen%>%group_by(FOD,day,Range)%>%mutate(timeFDRtrain=round(cumsum(Time)))
+
+#add Coloum with total time spent for a given FOD
+daggByScen <- daggByScen%>%group_by(FOD,day)%>%mutate(timeFDtrain=round(cumsum(Time)))
+
+#add Coloum with total time spent for a given Day
+daggByScen <- daggByScen%>%group_by(day)%>%mutate(timeDtrain=round(cumsum(Time)))
+daggByCol <- df %>% filter(Person_Speed<3)%>%group_by(testID,day,Scenario,FOD,Range,objColl)%>%summarize(avgSpeed=mean(Person_Speed),medianSpeed=median(Person_Speed),maxSpeed=max(Person_Speed),minSpeed=min(Person_Speed),objectDetected=sum(objDet,na.rm = TRUE),objectCollisions=sum(objColl,na.rm = TRUE),Time=max(Time_in_MS*1000))%>% arrange(testID)
+
+
+#Model equation
+model_equation <- function(model, ...) {
+  format_args <- list(...)
+  
+  model_coeff <- model$coefficients
+  format_args$x <- abs(model$coefficients)
+  model_coeff_sign <- sign(model_coeff)
+  model_coeff_prefix <- case_when(model_coeff_sign == -1 ~ " - ",
+                                  model_coeff_sign == 1 ~ " + ",
+                                  model_coeff_sign == 0 ~ " + ")
+  model_eqn <- paste(strsplit(as.character(model$call$formula), "~")[[2]], # 'y'
+                     "=",
+                     paste(if_else(model_coeff[1]<0, "- ", ""),
+                           do.call(format, format_args)[1],
+                           paste(model_coeff_prefix[-1],
+                                 do.call(format, format_args)[-1],
+                                 " * ",
+                                 names(model_coeff[-1]),
+                                 sep = "", collapse = ""),
+                           sep = ""))
+  return(model_eqn)
+}
+
+
+daggHeat <- df %>% filter(Person_Speed<3)%>%group_by(Scenario,FOD,Range,day)%>%summarize(avgSpeed=mean(Person_Speed),medianSpeed=median(Person_Speed),maxSpeed=max(Person_Speed),minSpeed=min(Person_Speed),objectDetected=sum(objDet,na.rm = TRUE),objectCollisions=sum(objColl,na.rm = TRUE),Time=max(Time_in_MS*1000))
+
+###----------------Numeric Analysis part----------------###
+
+
+dataWhole <- daggByScen %>%
+  group_by(FOD, Range) %>%
+  summarize(objectCollisions = mean(objectCollisions, na.rm = TRUE), objectDetected = mean(objectDetected, na.rm = TRUE), Time = mean(Time * 1000))
+
+test<-daggByScen %>%
+  group_by(FOD, Range) %>%
+  summarize(objectCollisions = mean(objectCollisions, na.rm = TRUE), objectDetected = mean(objectDetected, na.rm = TRUE), Time = mean(Time * 1000))
+
+
+#WOBBL removes the baseline from the data and leaves us with Whole-room and Corridor
+daggByScenWOBL<-daggByScen[!daggByScen$FOD=="Baseline",]
+daggByScenWOBLC<-daggByScen[!daggByScen$FOD=="Corridor",]
+daggByScenWOBLW<-daggByScen[!daggByScen$FOD=="WholeRoom",]
+m<-lm(Time~FOD*Range+totalTimeTraining,data=daggByScen[!daggByScen$FOD=="Baseline",])
+summary(m)
+model_equation(m)
+daggByScenWOBL$predTime<-predict(m)
+
+m0<-lm(log(Time)~log(totalTimeTraining)+FOD*log(Range),data=daggByScen)
+
+
+baseDat <- daggByScen[daggByScen$FOD=="Baseline",]
+mbaseDat <- lm(log(Time)~log(totalTimeTraining),data=baseDat)
+
+
+wrDat <- daggByScen[daggByScen$FOD=="WholeRoom",]
+mwrDat<- lm(log(Time)~log(totalTimeTraining),data=wrDat)
+wr2Dat <- wrDat[wrDat$Range=="2",]
+wr3Dat <- wrDat[wrDat$Range=="3",]
+wr4Dat <- wrDat[wrDat$Range=="4",]
+
+corrDat <- daggByScen[daggByScen$FOD=="Corridor",]
+mcorrDat<- lm(log(Time)~log(totalTimeTraining),data=corrDat)
+corr2Dat <- corrDat[corrDat$Range=="2",]
+corr3Dat <- corrDat[corrDat$Range=="3",]
+corr4Dat <- corrDat[corrDat$Range=="4",]
+
+###----------------Plots data----------------###
+lower_ci <- function(mean, se, n, conf_level = 0.95){
+  lower_ci <- mean - qt(1 - ((1 - conf_level) / 2), n - 1) * se
+}
+upper_ci <- function(mean, se, n, conf_level = 0.95){
+  upper_ci <- mean + qt(1 - ((1 - conf_level) / 2), n - 1) * se
+}
+
+daggByDFR<-daggByScen %>%group_by(FOD,day,Range)%>%summarize(totalTimeTraining=max(totalTimeTraining),avgTime=mean(Time),ssd = sd(Time),count=n(),se = ssd / sqrt(count))%>%mutate(lower_ci=lower_ci(avgTime,se,count),upper_ci=upper_ci(avgTime,se,count))
+
+#Learning curve
+totalTimeTraining=1:6000
+#Set to summary variables 
+FOD = "Baseline"
+Range="1"
+b=21.45979
+z= -0.06329
+#This is the Time fed into dxf
+Time<- b*totalTimeTraining^z
+baseDatxf=as.data.frame(totalTimeTraining)
+baseDatxf=cbind(baseDatxf,Time)
+baseDatxf=cbind(baseDatxf,FOD)
+baseDatxf=cbind(baseDatxf,Range)
+
+FOD = "Corridor" 
+Range="2"
+b=31.32990
+z=-0.10500
+Time<- b*totalTimeTraining^z
+corr2Datxf=as.data.frame(totalTimeTraining)
+corr2Datxf=cbind(corr2Datxf,Time)
+corr2Datxf=cbind(corr2Datxf,FOD)
+corr2Datxf=cbind(corr2Datxf,Range)
+
+Range="3"
+b=54.72364
+z=-0.17482
+Time<- b*totalTimeTraining^z
+corr3Datxf=as.data.frame(totalTimeTraining)
+corr3Datxf=cbind(corr3Datxf,Time)
+corr3Datxf=cbind(corr3Datxf,FOD)
+corr3Datxf=cbind(corr3Datxf,Range)
+
+Range="4"
+b=9.81972
+z=0.03528
+Time<- b*totalTimeTraining^z
+corr4Datxf=as.data.frame(totalTimeTraining)
+corr4Datxf=cbind(corr4Datxf,Time)
+corr4Datxf=cbind(corr4Datxf,FOD)
+corr4Datxf=cbind(corr4Datxf,Range)
+
+
+FOD = "WholeRoom"
+Range="2"
+b=37.2835	
+z=-0.1273
+Time<- b*totalTimeTraining^z
+wr2Datxf=as.data.frame(totalTimeTraining)
+wr2Datxf=cbind(wr2Datxf,Time)
+wr2Datxf=cbind(wr2Datxf,FOD)
+wr2Datxf=cbind(wr2Datxf,Range)
+
+Range="3"
+b=47.50384	
+z=-0.15325
+Time<- b*totalTimeTraining^z
+wr3Datxf=as.data.frame(totalTimeTraining)
+wr3Datxf=cbind(wr3Datxf,Time)
+wr3Datxf=cbind(wr3Datxf,FOD)
+wr3Datxf=cbind(wr3Datxf,Range)
+
+Range="4"
+b=54.86090	
+z=-0.16613
+Time<- b*totalTimeTraining^z
+wr4Datxf=as.data.frame(totalTimeTraining)
+wr4Datxf=cbind(wr4Datxf,Time)
+wr4Datxf=cbind(wr4Datxf,FOD)
+wr4Datxf=cbind(wr4Datxf,Range)
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data information
+Below, a summary of our data is presented. In total, 420 tests were completed over three days (140 per day), using three different Field Of Detections (FOD - Baseline, WholeRoom and Corridor), with exception of WholeRoom and Corridor differing between three ranges (two, three and four meters), as Baseline represents the original wite cane. Scenarios describe the amount of different parkours the system was tested on (each condition with different lengths). In addition, each test logged the speed of the participant, the amount of objects detected by the cane, the amount of collisions by the user and the completion time of the individual parkours.
+```{r first summary, echo=FALSE}
+
+summary(daggByScen)
+
+#kable(summary(daggByScen[1:16]), caption = "Data")
+# summary(nameOfDataFile)
+#Shows a table of the data (e.g. could be the coefficients for completion time to FOD compairson)
+```
+
+
+
+
+
+
+
+##Normal aEMA
+
+
+######Walking speed
+```{r Normal aEMA Spd., echo=FALSE}
+summary(lm(avgSpeed ~ Range+log(totalTimeTraining), data=wrDat))
+```
+
+
+######Objects detected
+```{r Normal aEMA Det., echo=FALSE}
+summary(lm(objectDetected ~ Range+log(totalTimeTraining), data=wrDat))
+```
+
+
+######Collisions 
+```{r Normal aEMA Coll., echo=FALSE}
+summary(glm(objectCollisions ~ Range+log(totalTimeTraining)  ,family="poisson",data=wrDat))
+```
+
+
+
+
+##Body-preview aEMA
+
+######Objects detected
+```{r Body-pr. aEMA Det., echo=FALSE}
+summary(lm(objectDetected ~ Range+log(totalTimeTraining), data=corrDat))
+```
+
+
+######Walking speed
+```{r Body-pr. aEMA Spd., echo=FALSE}
+summary(lm(avgSpeed ~ Range+log(totalTimeTraining), data=corrDat))
+```
+
+
+######Collisions 
+```{r Body-pr. aEMA Coll., echo=FALSE}
+summary(glm(objectCollisions ~ Range+log(totalTimeTraining)  ,family="poisson",data=corrDat))
+```
+
+
+
+
+##Baseline vs. aEMA
+
+
+
+######Objects detected
+```{r Baseline/aEMA Det., echo=FALSE}
+summary(lm(objectDetected ~ FOD + log(totalTimeTraining) ,family="poisson",data=daggByScen))
+```
+
+
+######Walking speed
+```{r Baseline/aEMA Spd., echo=FALSE}
+summary(lm(avgSpeed ~ FOD + log(totalTimeTraining) ,family="poisson",data=daggByScen))
+```
+
+
+######Collisions 
+```{r Baseline/aEMA Coll., echo=FALSE}
+summary(glm(objectCollisions ~ FOD + log(totalTimeTraining) ,family="poisson",data=daggByScen))
+```
+
+
+
+
+
+
+
+
+
+
