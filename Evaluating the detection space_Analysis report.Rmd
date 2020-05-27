@@ -229,6 +229,7 @@ shapiro.test(daggByScen$objectDetected)
 
 shapiro.test(daggByScen$objectCollisions)
 ```
+
 and illustrated the data in qq-plots for a better overview.
 
 ```{r Normality plots, echo=FALSE}
@@ -245,23 +246,24 @@ The p-values show a significant difference and, thereby rejects the nullhypothes
 To visualise the difference between FOD and range, in regards to object collisions, object detections and walking speed, the following models were summarized, using Guassian and Possoin distirbutions, which regardless of our data's distribution did not change the outcome of significance. 
 
 =======
-##Training Time
-######Walking speed
-```{r Normal aEMA Spd., echo=FALSE}
+### Training Time
+###### Walking speed
+```{r Training time Walking Speed., echo=FALSE}
 summary(lm(avgSpeed ~ totalTimeTrainingHrs, data=daggByScen))
 ```
-#####Object Detected
-```{r Normal aEMA Det., echo=FALSE}
+
+##### Object Detected
+```{r Training time Detections, echo=FALSE}
 summary(glm(objectDetected ~ totalTimeTrainingHrs, family="poisson", data=daggByScen))
 ```
-#####Object Collisions
-```{r Normal aEMA Det., echo=FALSE}
+
+##### Object Collisions
+```{r Training time Collisions, echo=FALSE}
 summary(glm(objectCollisions ~ totalTimeTrainingHrs, family="poisson", data=daggByScen))
 ```
->>>>>>> 8eb38a94626b7cab5758107b2b29b334cc3167ff
+
 
 ### Walking speed
-
 ###### Wholeroom
 ```{r Normal aEMA Spd., echo=FALSE}
 summary(lm(avgSpeed ~ Range+totalTimeTrainingHrs, data=wrDat))
@@ -272,23 +274,23 @@ summary(lm(avgSpeed ~ Range+totalTimeTrainingHrs, data=wrDat))
 summary(lm(avgSpeed ~ Range+totalTimeTrainingHrs,data=corrDat))
 ```
 
-
 ###### AllData
 ```{r Baseline/aEMA Spd., echo=FALSE}
 summary(lm(avgSpeed ~ FOD + totalTimeTrainingHrs, data=daggByScen))
 ```
 
-```{r Baseline/aEMA Spd., echo=FALSE}
+###### FOD and Range
+```{r Speed based on FOD and Range, echo=FALSE}
 summary(lm(avgSpeed ~ FOD*Range + totalTimeTrainingHrs, data=daggByScen))
 ```
 
 ######Detections
-```{r Body-pr. aEMA Spd., echo=FALSE}
+```{r Speed based on Detections, echo=FALSE}
 summary(lm(avgSpeed ~ objectDetected+totalTimeTrainingHrs,data=corrDat))
 ```
 
 ######Collisions
-```{r Body-pr. aEMA Spd., echo=FALSE}
+```{r Speed based on collisions, echo=FALSE}
 summary(lm(avgSpeed ~ objectCollisions+totalTimeTrainingHrs,data=corrDat))
 ```
 
@@ -310,17 +312,18 @@ summary(glm(objectDetected ~ Range+totalTimeTrainingHrs, family="poisson",data=c
 summary(glm(objectDetected ~ FOD + totalTimeTrainingHrs, family="poisson",data=daggByScen))
 ```
 
-```{r Normal aEMA Det., echo=FALSE}
+###### Detections based on FOD and Range
+```{r Detections based on FOD and Range, echo=FALSE}
 summary(glm(objectDetected ~ FOD *Range + totalTimeTrainingHrs, family="poisson", data=daggByScen))
 ```
 
-######Collisions
-```{r Baseline/aEMA Det., echo=FALSE}
+###### Detections based on Collisions
+```{r Detections based on Collisions, echo=FALSE}
 summary(glm(objectDetected ~ objectCollisions + totalTimeTrainingHrs, family="poisson",data=daggByScen))
 ```
 
-######Collisions
-```{r Baseline/aEMA Det., echo=FALSE}
+###### Detections based on Time
+```{r Detections based on Time, echo=FALSE}
 summary(glm(objectDetected ~ Time + totalTimeTrainingHrs, family="poisson",data=daggByScen))
 ```
 
@@ -343,12 +346,34 @@ summary(glm(objectCollisions ~ Range+totalTimeTrainingHrs ,family="poisson",data
 summary(glm(objectCollisions ~ FOD + totalTimeTrainingHrs ,family="poisson",data=daggByScen))
 ```
 
-<<<<<<< HEAD
+
 ## Number of collisions
 The plot below summarizes the number of collisions for the baseline and the two conditions at each range. Increasing the range from 1 - 2-m results in a 33\% and 40\% decrease in collisions for the \textit{Body-preview-} and \textit{Regular  aEMA} respectably. For ranges over two meter both aEMA have a non-significant increase in collisions - \textit{Regular aEMA} ($\beta$ = 0.052, z(177) = 0.578, p = .6) and \textit{Body-preview aEMA} ($\beta$ = 0.09, z(177) = 1.04, p = .3). 
 
 ```{r CollisionsPlot, echo=FALSE}
+daggColl <- daggByScen %>%
+  group_by(Range, FOD)%>%
+  summarise(avgColl=mean(objectCollisions),
+            smean = mean(objectCollisions, na.rm = TRUE),
+            ssd = sd(objectCollisions, na.rm = TRUE),
+            count = n()) %>%
+  mutate(
+    se = ssd / sqrt(count),
+    lowerci = lower_ci(smean, se, count),
+    upperci = upper_ci(smean, se, count))
 
+ggplot(data = daggColl, aes(x=Range, y=avgColl, group=FOD, color=FOD))+
+  geom_point(position = position_dodge(0.1), alpha=1)+
+  geom_line(position = position_dodge(0.1), alpha=1, size=1)+
+  #geom_bar(position="dodge", stat = "identity", size=.3)+
+  geom_errorbar(aes(ymin = lowerci, ymax = upperci), width = 0.2, color = "Black", position = position_dodge(0.1)) +
+  geom_text(aes(label = round(avgColl, 1)), size = 6, alpha=1, position = position_dodge(0.4), vjust = -0.5) +
+  scale_fill_hue(name="Condition", labels=c("White Cane", "Body-preview aEMA", "Normal aEMA"))+
+  ggtitle("Number of Objects Collisions per Range and Condition")+
+  ylab("Mean Number of Collisions") +
+  scale_y_continuous()+
+  theme_bw()
+  
 ```
 
  
@@ -358,24 +383,59 @@ The mean walking speed for the baseline and the two conditions at each range can
 The more obstacles the participant detected the slower he walked ($\beta$ = -0.01, z(177) = -8.9, p < .001). Likewise, colliding with an obstacle reduces the participants walking speed ($\beta$ = -0.03, z(177) = -4.58, p < .001).
 
 ```{r SpeedPlot, echo=FALSE}
+daggSpeed <- daggByScen %>%
+  group_by(Range, FOD)%>%
+  summarise(newAvgSpeed=mean(avgSpeed),
+            smean = mean(avgSpeed, na.rm = TRUE),
+            ssd = sd(avgSpeed, na.rm = TRUE),
+            count = n()) %>%
+  mutate(
+    se = ssd / sqrt(count),
+    lowerci = lower_ci(smean, se, count),
+    upperci = upper_ci(smean, se, count))
 
+ggplot(data = daggSpeed, aes(x=Range, y=newAvgSpeed, group=FOD, color=FOD))+
+  geom_point(position = position_dodge(0.1), alpha=1)+
+  geom_line(position = position_dodge(0.1), alpha=1, size=1)+
+  #geom_bar(position="dodge", stat = "identity", size=.3)+
+  geom_errorbar(aes(ymin = lowerci, ymax = upperci), width = 0.2, color = "Black", position = position_dodge(0.1)) +
+  geom_text(aes(label = round(newAvgSpeed, 2)), size = 6, alpha=1, position = position_dodge(0.6), vjust = -0.5) +
+  scale_fill_hue(name="Condition", labels=c("White Cane", "Body-preview aEMA", "Normal aEMA"))+
+  ggtitle("Walking Speed per Range and Condition")+
+  ylab("Mean walking speed in meters per Second") +
+  scale_y_continuous()+
+  theme_bw()
 ```
 
 ## Number of detections
 The following plot summarizes the number of detections for the baseline and the two conditions at each range. When using the \textit{Regular aEMA} the mean number of detections increased by 39\% between a range of 2-m and 3-m while only increasing 2\% between a range of 3-m and 4-m. Thus, a multiple regression analysis shows that range was a significant predictor when using the \textit{Regular aEMA} ($\beta$ = 0.167, z(177) = 6.18, p < .001), however, range was not significant predictor for obstacle detection with the \textit{Body-preview aEMA} ($\beta$ = 0.033, z(177) = 1.008, p = .3). When comparing the \textit{Body-preview aEMA} to the white cane no significant predictor was found ($\beta$ = 0.04, z(416) = 0.71, p = 0.5), while the \textit{Regular aEMA} detected more obstacles compared to the white cane ($\beta$ = 0.45, z(416) = 8.58, p < .001).
 
 ```{r DetectionsPLot, echo=FALSE}
+daggDetect <- daggByScen %>%
+  group_by(Range, FOD)%>%
+  summarise(avgObjDet=mean(objectDetected),
+            smean = mean(objectDetected, na.rm = TRUE),
+            ssd = sd(objectDetected, na.rm = TRUE),
+            count = n()) %>%
+  mutate(
+    se = ssd / sqrt(count),
+    lowerci = lower_ci(smean, se, count),
+    upperci = upper_ci(smean, se, count))
 
-=======
-```{r Baseline/aEMA Coll., echo=FALSE}
-summary(glm(objectCollisions ~ FOD*Range + totalTimeTrainingHrs ,family="poisson",data=daggByScen))
+ggplot(data = daggDetect, aes(x=Range, y=avgObjDet, group=FOD, color=FOD))+
+  geom_point(position = position_dodge(0.1), alpha=1)+
+  geom_line(position = position_dodge(0.1), alpha=1, size=1)+
+  #geom_bar(position="dodge", stat = "identity", size=.3)+
+  geom_errorbar(aes(ymin = lowerci, ymax = upperci), width = 0.2, color = "Black", position = position_dodge(0.1)) +
+  geom_text(aes(label = round(avgObjDet, 1)), size = 6, alpha=1, position = position_dodge(0.45), vjust = -0.5) +
+  scale_fill_hue(name="Condition", labels=c("White Cane", "Body-preview aEMA", "Normal aEMA"))+
+  ggtitle("Number of Objects Detected per Range and Condition")+
+  ylab("Mean Obstacles Detected") +
+  scale_y_continuous()+
+  theme_bw()
 ```
 
-```{r Normal aEMA Coll., echo=FALSE}
-summary(glm(objectCollisions ~ objectDetected
-            +totalTimeTrainingHrs, family="poisson",data=wrDat))
->>>>>>> 8eb38a94626b7cab5758107b2b29b334cc3167ff
-```
+
 
 
 
