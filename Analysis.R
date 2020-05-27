@@ -489,7 +489,7 @@ ggplot(daggByScen, aes(x=Range, y=objectDetected, colour=factor(Range)))+
 
 
 
-daggByScen %>% group_by(Range, FOD)%>%mutate(avgObjDet=mean(objectDetected) %>% ggplot(aes(x=Range, y=objectDetected, colour=factor(Range))))+ 
+daggByScen %>% group_by(Range, FOD)%>%summarize(avgObjDet=mean(objectDetected) %>% ggplot(aes(x=Range, y=objectDetected, colour=factor(Range))))+ 
                                                geom_bar(position="dodge", stat = "identity",colour="black", size=.3)+ 
                                                #xlab("Days")+
                                                #ylab("objectDetections")+
@@ -502,7 +502,7 @@ daggByScen %>% group_by(Range, FOD)%>%mutate(avgObjDet=mean(objectDetected) %>% 
                                              
                                              
 #Seperate dataset attempt
-daggByScenMean <- daggByScen %>% group_by(Range, FOD)%>%mutate(avgObjDet=mean(objectDetected))
+daggByScenMean <- daggByScen %>% group_by(Range, FOD)%>%summarize(avgObjDet=mean(objectDetected))
                                              
                                             
 ggplot(daggByScenMean,aes(x=Range, y=avgObjDet, colour=factor(Range)))+ 
