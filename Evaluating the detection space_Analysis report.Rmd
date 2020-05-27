@@ -37,13 +37,19 @@ library(rmarkdown)
 load('data_all.rda')
 
 #Data Grouped by Snario
-daggByScen <- df %>% filter(Person_Speed<3)%>%group_by(testID,day,Scenario,FOD,Range)%>%summarize(avgSpeed=mean(Person_Speed),medianSpeed=median(Person_Speed),maxSpeed=max(Person_Speed),minSpeed=min(Person_Speed),objectDetected=sum(objDet,na.rm = TRUE),objectCollisions=sum(objColl,na.rm = TRUE),Time=max(Time_in_MS*1000))%>% arrange(testID)
+daggByScen <- df %>% 
+  filter(Person_Speed<3) %>%
+  group_by(testID,day,Scenario,FOD,Range) %>%
+  summarize(avgSpeed=mean(Person_Speed),medianSpeed=median(Person_Speed),maxSpeed=max(Person_Speed),minSpeed=min(Person_Speed),objectDetected=sum(objDet,na.rm = TRUE),objectCollisions=sum(objColl,na.rm = TRUE),Time=max(Time_in_MS*1000)) %>% 
+  arrange(testID)
 
 #add Coloum with sum of total time spent 
 daggByScen$totalTimeTraining<-round(cumsum(daggByScen$Time))
 
 #add Coloum with total time spent for a given FOD with a given Range
-daggByScen <- daggByScen%>%group_by(FOD,day,Range)%>%mutate(timeFDRtrain=round(cumsum(Time)))
+daggByScen <- daggByScen %>%
+  group_by(FOD,day,Range) %>%
+  mutate(timeFDRtrain=round(cumsum(Time)))
 
 #add Coloum with total time spent for a given FOD
 daggByScen <- daggByScen%>%group_by(FOD,day)%>%mutate(timeFDtrain=round(cumsum(Time)))
@@ -235,8 +241,24 @@ qqPlot(daggByScen$Time)
 The p-values show a significant difference and, thereby rejects the nullhypothesis of the data following a normal distributed. For analysing the results further we will be using glm models wiht a Poisson distribution.
 
 
+<<<<<<< HEAD
 To visualise the difference between FOD and range, in regards to object collisions, object detections and walking speed, the following models were summarized, using Guassian and Possoin distirbutions, which regardless of our data's distribution did not change the outcome of significance. 
 
+=======
+##Training Time
+######Walking speed
+```{r Normal aEMA Spd., echo=FALSE}
+summary(lm(avgSpeed ~ totalTimeTrainingHrs, data=daggByScen))
+```
+#####Object Detected
+```{r Normal aEMA Det., echo=FALSE}
+summary(glm(objectDetected ~ totalTimeTrainingHrs, family="poisson", data=daggByScen))
+```
+#####Object Collisions
+```{r Normal aEMA Det., echo=FALSE}
+summary(glm(objectCollisions ~ totalTimeTrainingHrs, family="poisson", data=daggByScen))
+```
+>>>>>>> 8eb38a94626b7cab5758107b2b29b334cc3167ff
 
 ### Walking speed
 
@@ -256,7 +278,19 @@ summary(lm(avgSpeed ~ Range+totalTimeTrainingHrs,data=corrDat))
 summary(lm(avgSpeed ~ FOD + totalTimeTrainingHrs, data=daggByScen))
 ```
 
+```{r Baseline/aEMA Spd., echo=FALSE}
+summary(lm(avgSpeed ~ FOD*Range + totalTimeTrainingHrs, data=daggByScen))
+```
 
+######Detections
+```{r Body-pr. aEMA Spd., echo=FALSE}
+summary(lm(avgSpeed ~ objectDetected+totalTimeTrainingHrs,data=corrDat))
+```
+
+######Collisions
+```{r Body-pr. aEMA Spd., echo=FALSE}
+summary(lm(avgSpeed ~ objectCollisions+totalTimeTrainingHrs,data=corrDat))
+```
 
 ### Object detections
 
@@ -276,6 +310,19 @@ summary(glm(objectDetected ~ Range+totalTimeTrainingHrs, family="poisson",data=c
 summary(glm(objectDetected ~ FOD + totalTimeTrainingHrs, family="poisson",data=daggByScen))
 ```
 
+```{r Normal aEMA Det., echo=FALSE}
+summary(glm(objectDetected ~ FOD *Range + totalTimeTrainingHrs, family="poisson", data=daggByScen))
+```
+
+######Collisions
+```{r Baseline/aEMA Det., echo=FALSE}
+summary(glm(objectDetected ~ objectCollisions + totalTimeTrainingHrs, family="poisson",data=daggByScen))
+```
+
+######Collisions
+```{r Baseline/aEMA Det., echo=FALSE}
+summary(glm(objectDetected ~ Time + totalTimeTrainingHrs, family="poisson",data=daggByScen))
+```
 
 
 ### Object collisions
@@ -296,6 +343,7 @@ summary(glm(objectCollisions ~ Range+totalTimeTrainingHrs ,family="poisson",data
 summary(glm(objectCollisions ~ FOD + totalTimeTrainingHrs ,family="poisson",data=daggByScen))
 ```
 
+<<<<<<< HEAD
 ## Number of collisions
 The plot below summarizes the number of collisions for the baseline and the two conditions at each range. Increasing the range from 1 - 2-m results in a 33\% and 40\% decrease in collisions for the \textit{Body-preview-} and \textit{Regular  aEMA} respectably. For ranges over two meter both aEMA have a non-significant increase in collisions - \textit{Regular aEMA} ($\beta$ = 0.052, z(177) = 0.578, p = .6) and \textit{Body-preview aEMA} ($\beta$ = 0.09, z(177) = 1.04, p = .3). 
 
@@ -318,6 +366,15 @@ The following plot summarizes the number of detections for the baseline and the 
 
 ```{r DetectionsPLot, echo=FALSE}
 
+=======
+```{r Baseline/aEMA Coll., echo=FALSE}
+summary(glm(objectCollisions ~ FOD*Range + totalTimeTrainingHrs ,family="poisson",data=daggByScen))
+```
+
+```{r Normal aEMA Coll., echo=FALSE}
+summary(glm(objectCollisions ~ objectDetected
+            +totalTimeTrainingHrs, family="poisson",data=wrDat))
+>>>>>>> 8eb38a94626b7cab5758107b2b29b334cc3167ff
 ```
 
 
