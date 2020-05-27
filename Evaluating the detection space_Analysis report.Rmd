@@ -2,16 +2,18 @@
 title: "Evaluating the detection space_Analysis report"
 author: "Milo Marsfeldt Skovfoged & Alexander Schiller Rasmussen"
 date: "25/5/2020"
-output: pdf_document
+output:
+  word_document: default
+  pdf_document: default
 ---
 
 1. [Introduction](#introduction)
 2. [Data information](#data-information)
 3. [Predicition of course completion time](#predicition-of-course-completion-time)
 
-4. [Normal aEMA](#normal-aema)
-5. [Body-preview aEMA](#body-preview-aema)
-6. [Baseline vs. aEMA](#baseline-vs.-aema)
+4. [Number of collisions](#number-of-collisions)
+5. [Walking speed](#walking-speed)
+6. [Number of detections](#number-of-detections)
 
 7. [Analysis conclusion](#analysis-conclusion)
 
@@ -30,7 +32,7 @@ library(scales)
 library(magrittr)
 library(knitr)
 library("car")
-
+library(rmarkdown)
 #GetData
 load('data_all.rda')
 
@@ -236,9 +238,13 @@ qqPlot(daggByScen$objectCollisions)
 qqPlot(daggByScen$Time)
 ```
 
-The p-values show a significant difference and thereby rejects the nullhypothesis of the data follows a normal distributed. For analysing the results further we will be using glm models wiht a Poisson distribution.
+The p-values show a significant difference and, thereby rejects the nullhypothesis of the data following a normal distributed. For analysing the results further we will be using glm models wiht a Poisson distribution.
 
 
+<<<<<<< HEAD
+To visualise the difference between FOD and range, in regards to object collisions, object detections and walking speed, the following models were summarized, using Guassian and Possoin distirbutions, which regardless of our data's distribution did not change the outcome of significance. 
+
+=======
 ##Training Time
 ######Walking speed
 ```{r Normal aEMA Spd., echo=FALSE}
@@ -252,21 +258,22 @@ summary(glm(objectDetected ~ totalTimeTrainingHrs, family="poisson", data=daggBy
 ```{r Normal aEMA Det., echo=FALSE}
 summary(glm(objectCollisions ~ totalTimeTrainingHrs, family="poisson", data=daggByScen))
 ```
+>>>>>>> 8eb38a94626b7cab5758107b2b29b334cc3167ff
 
-##Walking speed
+### Walking speed
 
-######Wholeroom
+###### Wholeroom
 ```{r Normal aEMA Spd., echo=FALSE}
 summary(lm(avgSpeed ~ Range+totalTimeTrainingHrs, data=wrDat))
 ```
 
-######Corridor
+###### Corridor
 ```{r Body-pr. aEMA Spd., echo=FALSE}
 summary(lm(avgSpeed ~ Range+totalTimeTrainingHrs,data=corrDat))
 ```
 
 
-######AllData
+###### AllData
 ```{r Baseline/aEMA Spd., echo=FALSE}
 summary(lm(avgSpeed ~ FOD + totalTimeTrainingHrs, data=daggByScen))
 ```
@@ -285,20 +292,20 @@ summary(lm(avgSpeed ~ objectDetected+totalTimeTrainingHrs,data=corrDat))
 summary(lm(avgSpeed ~ objectCollisions+totalTimeTrainingHrs,data=corrDat))
 ```
 
-##Object detections
+### Object detections
 
-######Wholeroom
+###### Wholeroom
 ```{r Normal aEMA Det., echo=FALSE}
 summary(glm(objectDetected ~ Range + totalTimeTrainingHrs, family="poisson", data=wrDat))
 ```
 
-######Corridor
+###### Corridor
 ```{r Body-pr. aEMA Det., echo=FALSE}
 summary(glm(objectDetected ~ Range+totalTimeTrainingHrs, family="poisson",data=corrDat))
 ```
 
 
-######AllData
+###### AllData
 ```{r Baseline/aEMA Det., echo=FALSE}
 summary(glm(objectDetected ~ FOD + totalTimeTrainingHrs, family="poisson",data=daggByScen))
 ```
@@ -318,24 +325,48 @@ summary(glm(objectDetected ~ Time + totalTimeTrainingHrs, family="poisson",data=
 ```
 
 
-##Object collisions
+### Object collisions
 
-######Wholeroom
+###### Wholeroom
 ```{r Normal aEMA Coll., echo=FALSE}
 summary(glm(objectCollisions ~ Range+totalTimeTrainingHrs, family="poisson",data=wrDat))
 ```
 
-######Corridor 
+###### Corridor 
 ```{r Body-pr. aEMA Coll., echo=FALSE}
 summary(glm(objectCollisions ~ Range+totalTimeTrainingHrs ,family="poisson",data=corrDat))
 ```
 
 
-######Alldata
+###### Alldata
 ```{r Baseline/aEMA Coll., echo=FALSE}
 summary(glm(objectCollisions ~ FOD + totalTimeTrainingHrs ,family="poisson",data=daggByScen))
 ```
 
+<<<<<<< HEAD
+## Number of collisions
+The plot below summarizes the number of collisions for the baseline and the two conditions at each range. Increasing the range from 1 - 2-m results in a 33\% and 40\% decrease in collisions for the \textit{Body-preview-} and \textit{Regular  aEMA} respectably. For ranges over two meter both aEMA have a non-significant increase in collisions - \textit{Regular aEMA} ($\beta$ = 0.052, z(177) = 0.578, p = .6) and \textit{Body-preview aEMA} ($\beta$ = 0.09, z(177) = 1.04, p = .3). 
+
+```{r CollisionsPlot, echo=FALSE}
+
+```
+
+ 
+## Walking speed
+The mean walking speed for the baseline and the two conditions at each range can be seen in the plot below. Multiple regression analysis showed that for the \textit{Regular aEMA} increasing the detection range resulted in decreasing the participants walking speed ($\beta$ = -0.019, t(177) = -3.13, p = .002), however, using the \textit{Body-preview aEMA} had a non-significant increase in waking speed ($\beta$ = 0.014, t(177) = 1.85, p = .06). When comparing the two conditions to the white cane showed that the \textit{Body-preview aEMA} did not significant influence the walking speed of the user ($\beta$ < 0.001, t(416) = 0.033, p = 0.9), while the \textit{Regular aEMA} resulted the user walking slower ($\beta$ = -0.05, t(416) = -4.22, p < .001).
+
+The more obstacles the participant detected the slower he walked ($\beta$ = -0.01, z(177) = -8.9, p < .001). Likewise, colliding with an obstacle reduces the participants walking speed ($\beta$ = -0.03, z(177) = -4.58, p < .001).
+
+```{r SpeedPlot, echo=FALSE}
+
+```
+
+## Number of detections
+The following plot summarizes the number of detections for the baseline and the two conditions at each range. When using the \textit{Regular aEMA} the mean number of detections increased by 39\% between a range of 2-m and 3-m while only increasing 2\% between a range of 3-m and 4-m. Thus, a multiple regression analysis shows that range was a significant predictor when using the \textit{Regular aEMA} ($\beta$ = 0.167, z(177) = 6.18, p < .001), however, range was not significant predictor for obstacle detection with the \textit{Body-preview aEMA} ($\beta$ = 0.033, z(177) = 1.008, p = .3). When comparing the \textit{Body-preview aEMA} to the white cane no significant predictor was found ($\beta$ = 0.04, z(416) = 0.71, p = 0.5), while the \textit{Regular aEMA} detected more obstacles compared to the white cane ($\beta$ = 0.45, z(416) = 8.58, p < .001).
+
+```{r DetectionsPLot, echo=FALSE}
+
+=======
 ```{r Baseline/aEMA Coll., echo=FALSE}
 summary(glm(objectCollisions ~ FOD*Range + totalTimeTrainingHrs ,family="poisson",data=daggByScen))
 ```
@@ -343,6 +374,7 @@ summary(glm(objectCollisions ~ FOD*Range + totalTimeTrainingHrs ,family="poisson
 ```{r Normal aEMA Coll., echo=FALSE}
 summary(glm(objectCollisions ~ objectDetected
             +totalTimeTrainingHrs, family="poisson",data=wrDat))
+>>>>>>> 8eb38a94626b7cab5758107b2b29b334cc3167ff
 ```
 
 
