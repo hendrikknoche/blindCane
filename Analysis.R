@@ -34,6 +34,98 @@ daggByCol <- df %>% filter(Person_Speed<3)%>%group_by(testID,day,Scenario,FOD,Ra
 
 #----------------------------   The effect of speed
 
+# Barplot for detections
+daggDetect <- daggByScen %>%
+  group_by(Range, FOD)%>%
+  summarise(avgObjDet=mean(objectDetected),
+            smean = mean(objectDetected, na.rm = TRUE),
+            ssd = sd(objectDetected, na.rm = TRUE),
+            count = n()) %>%
+  mutate(
+    se = ssd / sqrt(count),
+    lowerci = lower_ci(smean, se, count),
+    upperci = upper_ci(smean, se, count))
+
+ggplot(data = daggDetect, aes(x=Range, y=avgObjDet, group=FOD, color=FOD))+
+  geom_point(position = position_dodge(0.1), alpha=1)+
+  geom_line(position = position_dodge(0.1), alpha=1, size=1)+
+  #geom_bar(position="dodge", stat = "identity", size=.3)+
+  geom_errorbar(aes(ymin = lowerci, ymax = upperci), width = 0.2, color = "Black", position = position_dodge(0.1)) +
+  geom_text(aes(label = round(avgObjDet, 1)), size = 6, alpha=1, position = position_dodge(0.45), vjust = -0.5) +
+  scale_fill_hue(name="Condition", labels=c("White Cane", "Body-preview aEMA", "Normal aEMA"))+
+  ggtitle("Number of Objects Detected per Range and Condition")+
+  ylab("Mean Obstacles Detected") +
+  scale_y_continuous()+
+  theme_bw()
+
+daggColl <- daggByScen %>%
+  group_by(Range, FOD)%>%
+  summarise(avgColl=mean(objectCollisions),
+            smean = mean(objectCollisions, na.rm = TRUE),
+            ssd = sd(objectCollisions, na.rm = TRUE),
+            count = n()) %>%
+  mutate(
+    se = ssd / sqrt(count),
+    lowerci = lower_ci(smean, se, count),
+    upperci = upper_ci(smean, se, count))
+
+ggplot(data = daggColl, aes(x=Range, y=avgColl, group=FOD, color=FOD))+
+  geom_point(position = position_dodge(0.1), alpha=1)+
+  geom_line(position = position_dodge(0.1), alpha=1, size=1)+
+  #geom_bar(position="dodge", stat = "identity", size=.3)+
+  gedaggSpeed <- daggByScen %>%
+  group_by(Range, FOD)%>%
+  summarise(newAvgSpeed=mean(avgSpeed),
+            smean = mean(avgSpeed, na.rm = TRUE),
+            ssd = sd(avgSpeed, na.rm = TRUE),
+            count = n()) %>%
+  mutate(
+    se = ssd / sqrt(count),
+    lowerci = lower_ci(smean, se, count),
+    upperci = upper_ci(smean, se, count))
+
+ggplot(data = daggSpeed, aes(x=Range, y=newAvgSpeed, group=FOD, color=FOD))+
+  geom_point(position = position_dodge(0.1), alpha=1)+
+  geom_line(position = position_dodge(0.1), alpha=1, size=1)+
+  #geom_bar(position="dodge", stat = "identity", size=.3)+
+  geom_errorbar(aes(ymin = lowerci, ymax = upperci), width = 0.2, color = "Black", position = position_dodge(0.1)) +
+  geom_text(aes(label = round(newAvgSpeed, 2)), size = 6, alpha=1, position = position_dodge(0.6), vjust = -0.5) +
+  scale_fill_hue(name="Condition", labels=c("White Cane", "Body-preview aEMA", "Normal aEMA"))+
+  ggtitle("Walking Speed per Range and Condition")+
+  ylab("Mean walking speed in meters per Second") +
+  scale_y_continuous()+
+  theme_bw()om_errorbar(aes(ymin = lowerci, ymax = upperci), width = 0.2, color = "Black", position = position_dodge(0.1)) +
+  geom_text(aes(label = round(avgColl, 1)), size = 6, alpha=1, position = position_dodge(0.4), vjust = -0.5) +
+  scale_fill_hue(name="Condition", labels=c("White Cane", "Body-preview aEMA", "Normal aEMA"))+
+  ggtitle("Number of Objects Collisions per Range and Condition")+
+  ylab("Mean Number of Collisions") +
+  scale_y_continuous()+
+  theme_bw()
+
+
+ggplot(data = daggSpeed, aes(x=objectCollisions, y=newAvgSpeed, group=FOD, color=FOD))+
+  geom_point(position = position_dodge(0.1), alpha=1)+
+  geom_line(position = position_dodge(0.1), alpha=1, size=1)+
+  #geom_bar(position="dodge", stat = "identity", size=.3)+
+  geom_errorbar(aes(ymin = lowerci, ymax = upperci), width = 0.2, color = "Black", position = position_dodge(0.1)) +
+  geom_text(aes(label = round(newAvgSpeed, 2)), size = 6, alpha=1, position = position_dodge(0.6), vjust = -0.5) +
+  scale_fill_hue(name="Condition", labels=c("White Cane", "Body-preview aEMA", "Normal aEMA"))+
+  ggtitle("Walking Speed per Range and Condition")+
+  ylab("Mean walking speed in meters per Second") +
+  scale_y_continuous()+
+  theme_bw()om_errorbar(aes(ymin = lowerci, ymax = upperci), width = 0.2, color = "Black", position = position_dodge(0.1)) +
+  geom_text(aes(label = round(avgColl, 1)), size = 6, alpha=1, position = position_dodge(0.4), vjust = -0.5) +
+  scale_fill_hue(name="Condition", labels=c("White Cane", "Body-preview aEMA", "Normal aEMA"))+
+  ggtitle("Number of Objects Collisions per Range and Condition")+
+  ylab("Mean Number of Collisions") +
+  scale_y_continuous()+
+  theme_bw()
+
+
+# facet_grid(cols=vars(FOD))
+
+
+
 #data needs filtering on Speed
 
 #Histogram of avgSpeed
@@ -401,6 +493,15 @@ ggplot(daggByDFR,aes(x=totalTimeTraining,y=avgTime,color=factor(Range),shape=fac
   #stat_smooth(aes(y = objectDetected), color="green",method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
   facet_grid(cols=vars(FOD))
 
+ggplot(daggByDFR,aes(x=totalTimeTraining,y=avgTime,color=factor(Range),shape=factor(Range)))+
+  geom_point()+ 
+  geom_smooth(size=0)+ 
+  geom_errorbar(aes(ymin=lower_ci, ymax=upper_ci))+
+  stat_smooth(method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
+  theme_bw()+
+  #geom_point(aes(y = objectDetected), color = "green")+
+  #stat_smooth(aes(y = objectDetected), color="green",method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
+  facet_grid(cols=vars(FOD))
 
 
 doa<-daggByScen %>%group_by(day,FOD,Range)%>%summarize
