@@ -5,6 +5,7 @@ library(ggplot2)
 library(scales) 
 library(magrittr)
 library(ggpubr)
+library(plyr)
 #Removing data
 # "rm('name of dataset')"
 #
@@ -575,18 +576,43 @@ ggplot(daggByScen, aes(x=totalTimeTraining, y=Time, colour=factor(Range)))+
   #stat_regline_equation(aes(x=totalTimeTraining, y=Time))+
   facet_grid(cols=vars(FOD))+ ylim(0,30)
   
+ 
 
-
-
-ggplot(daggByScen, aes(x=day, y=objectDetected))+ 
-  geom_bar(position=position_dodge(), stat="identity",
-           colour="black", # Use black outlines,
-           size=.3)+      # Thinner lines
-  xlab("Days") +
-  ylab("objectDetections") +
-  scale_fill_hue(name="Supplement type", # Legend label, use darker colors
-                 breaks=c("OJ", "VC"),
-                 labels=c("Orange juice", "Ascorbic acid"))+
+ggplot(daggByScen, aes(x=Range, y=objectDetected, colour=factor(Range)))+ 
+  geom_bar(position="dodge", stat = "identity",colour="black", size=.3)+ 
+  #xlab("Days")+
+  ylab("avg. objectDetections")+
   ggtitle("ReEeEeEeeEEEeeE")+
-  scale_y_continuous(breaks=0:20*4) +
-  theme_bw()
+  scale_y_continuous(breaks=0:20*4)+
+  theme_bw()+
+  facet_grid(cols=vars(FOD))
+
+
+
+
+daggByScen %>% group_by(Range, FOD)%>%mutate(avgObjDet=mean(objectDetected) %>% ggplot(aes(x=Range, y=objectDetected, colour=factor(Range))))+ 
+                                               geom_bar(position="dodge", stat = "identity",colour="black", size=.3)+ 
+                                               #xlab("Days")+
+                                               #ylab("objectDetections")+
+                                               ggtitle("ReEeEeEeeEEEeeE")+
+                                               scale_y_continuous(breaks=0:20*4)+
+                                               theme_bw()+
+                                               facet_grid(cols=vars(FOD))
+
+                                             
+                                             
+                                             
+#Seperate dataset attempt
+daggByScenMean <- daggByScen %>% group_by(Range, FOD)%>%mutate(avgObjDet=mean(objectDetected))
+                                             
+                                            
+ggplot(daggByScenMean,aes(x=Range, y=avgObjDet, colour=factor(Range)))+ 
+geom_bar(position="dodge", stat = "identity",colour="black", size=.3)+ 
+#xlab("Days")+
+#ylab("objectDetections")+
+ggtitle("ReEeEeEeeEEEeeE")+
+scale_y_continuous(breaks=0:20*4)+
+theme_bw()+
+facet_grid(cols=vars(FOD))
+
+                                             
