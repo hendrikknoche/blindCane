@@ -223,7 +223,9 @@ summary(daggByScen)
 To test for normality in our data, we conducted a Shapiro Wilks test
 
 ```{r Normality check, echo=FALSE}
-shapiro.test(daggByScen$avgSpeed)
+LogSpeed <- log(daggByScen$avgSpeed)
+
+shapiro.test(LogSpeed)
 
 shapiro.test(daggByScen$objectDetected)
 

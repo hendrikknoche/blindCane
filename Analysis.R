@@ -59,6 +59,39 @@ ggplot(data = daggDetect, aes(x=Range, y=avgObjDet, group=FOD, color=FOD))+
   scale_y_continuous()+
   theme_bw()
 
+qqPlot(daggByScen$avgSpeed)
+
+
+objectsTime <- daggByScen$objectDetected / daggByScen$Time
+
+ggplot(daggByScen,aes(y = avgSpeed, x = objectsTime, color=factor(Range), alpha=0.9))+
+  geom_point()+
+  geom_jitter()+
+  stat_smooth(method = 'nls', formula = 'y~a+x*b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
+  #geom_smooth(size=0, color = "blue")+ 
+  #stat_smooth(color="red", method="glm", family="poisson", se=TRUE)+
+  #geom_point(aes(x = objectDetected,  color=I("#56B4E9")))+
+  #geom_smooth(aes(x = avgSpeed, y = objectDetected))+
+  #stat_smooth(aes(x = objectDetected), color="red", method="glm", family="poisson", se=TRUE)+
+  #scale_color_manual(labels=c("White Cane", "Body-preview aEMA", "Normal aEMA"))+
+  #facet_grid(cols=vars(FOD))+
+  #scale_colour_manual(values=c("#E69F00","#56B4E9"), labels = c("Detections", "Collisions"))+
+  #labs(colour = "Collisions")+
+  #ggtitle("The effect of Detections on Walking Speed")+
+  labs(y = "Mean Walking Speed in Meters per Second", 
+       x="Number of obstacle Detections")+
+  theme(axis.title.x=element_text(vjust=10,  
+                                  size=44), 
+        axis.title.y=element_text(size=15))+
+  scale_color_manual(name="Range", 
+                     values=c("#E69F00","#56B4E9","#143D59","#6DD47E"), 
+                     labels=c("1 meter", "2 meter", "3 meter", "4 meter"))+
+  #ylab("Mean Walking Speed in Meters per Second") +
+  #xlab("Number of obstacle Detections") +
+  facet_grid(cols=vars(FOD))+
+  theme_bw()
+
+
 daggColl <- daggByScen %>%
   group_by(Range, FOD)%>%
   summarise(avgColl=mean(objectCollisions),
@@ -76,7 +109,7 @@ ggplot(data = daggColl, aes(x=Range, y=avgColl, group=FOD, color=FOD))+
   #geom_bar(position="dodge", stat = "identity", size=.3)+
   geom_errorbar(aes(ymin = lowerci, ymax = upperci), width = 0.2, color = "Black", position = position_dodge(0.1)) +
   geom_text(aes(label = round(avgColl, 1)), size = 6, alpha=1, position = position_dodge(0.4), vjust = -0.5) +
-  scale_fill_hue(name="Condition", labels=c("White Cane", "Body-preview aEMA", "Normal aEMA"))+
+  scale_color_manual(labels=c("White Cane", "Body-preview aEMA", "Regular aEMA"))+
   ggtitle("Number of Objects Collisions per Range and Condition")+
   ylab("Mean Number of Collisions") +
   scale_y_continuous()+
@@ -236,6 +269,22 @@ ggplot(daggByScen,aes(y = avgSpeed, x = objectCollisions, colour = factor(FOD)))
   #geom_smooth(aes(x = avgSpeed, y = objectDetected))+
   stat_smooth(aes(x = objectDetected), color="red",method = 'nls', formula = 'y~a+x*b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
   facet_grid(cols=vars(Range))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #Number of detections and collisions based on avgSpeed split by Range
 ggplot(daggByScen,aes(y = avgSpeed, x = objectCollisions, colour = factor(Range)))+
