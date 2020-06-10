@@ -5,7 +5,10 @@ library(ggplot2)
 library(scales) 
 library(magrittr)
 library(ggpubr)
-library(plyr)
+library(grid)
+library(png)
+library(ggimage)
+#library(plyr)
 #Removing data
 # "rm('name of dataset')"
 #
@@ -649,3 +652,32 @@ theme_bw()+
 facet_grid(cols=vars(FOD))
 
                                              
+#Walking patterns
+#pathSet <- df[df$day=="1", df$Scenario=="8", df$Range=="3", df$FOD=="Corridor"]
+
+img <- readPNG("BgQuad.png")
+#image_file <- rasterGrob(img, interpolate = TRUE)
+
+pathSet  <- df %>% filter(Range == 1, Scenario== 1, FOD == "Baseline",  day == 3)
+pathSet = pathSet[-1,]
+pathSet2 <- df %>% filter(Range == 3, Scenario== 1, FOD == "Corridor",  day == 3)
+pathSet2 = pathSet2[-1,]
+pathSet3 <- df %>% filter(Range == 3, Scenario== 1, FOD == "WholeRoom", day == 3)
+pathSet3 = pathSet3[-1,]
+
+ggplot(pathSet, aes(x=Person_pos_X, y=Person_pos_Y, colour=factor(FOD)))+ 
+annotation_custom(rasterGrob(img, width = unit(1,"npc"), height = unit(1,"npc")), -Inf, Inf, -Inf, Inf)+
+geom_point()+ 
+geom_point(data=pathSet2)+ 
+geom_point(data=pathSet3)+ 
+theme_bw()
+
+  
+#annotation_custom(image_file, xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=Inf)
+
+
+
+
+
+
+
