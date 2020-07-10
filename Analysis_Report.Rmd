@@ -11,21 +11,24 @@ output:
 1. [Introduction](#introduction)
 2. [Data information](#data-information)
 3. [Predicition of course completion time](#predicition-of-course-completion-time)
-4. [Collisions per scenario](#collisions-per-scenario)
+4. [Collisions and Detections](#collisions-and-detections)
+5. [Speed](#speed)
+6. [Analysis reflection](#analysis-reflection)
+7. [Analysis conclusion](#analysis-conclusion)
 
+## Introduction
 
-##Introduction (This doesent become a headline - why?)
+This is the statistical report associated with the paper "Evaluating the detection space" by Milo Marsfeldt Skovfoged & Alexander Schiller Rasmussen. The field of study lies in researching visually impaired/blind navigation through environments, to find an ideal Range of looking ahead and Field of Detection (FOD), for the most progressive travel-route, while avoiding collisions as much as possible.
+This report gives an overview of what data was gathered and analysed, in regrads to different points of interrest.
 
-This is the statistical report associated with the paper "Evaluating the detection space" by Milo Marsfeldt Skovfoged & Alexander Schiller rasmussen. The field of study lies in research on behalf of visually impaired/blind navigation through environments to find an ideal distance and Field of Detection (FOD) for the most progressive travel-route, while avoiding collisions as much as possible.
-This report gives an overview of what data for the study was gathered and analysed, in regrads to different points of interrest.
-
-```{r setup, include=FALSE}
+```{r setup, include=FALSE,}
 library(tidyverse)
 library(readbulk)
 library(lubridate)
 library(ggplot2)
 library(scales) 
 library(magrittr)
+library(knitr)
 
 #GetData
 load('data_all.rda')
@@ -87,6 +90,8 @@ test<-daggByScen %>%
 
 #WOBBL removes the baseline from the data and leaves us with Whole-room and Corridor
 daggByScenWOBL<-daggByScen[!daggByScen$FOD=="Baseline",]
+daggByScenWOBLC<-daggByScen[!daggByScen$FOD=="Corridor",]
+daggByScenWOBLW<-daggByScen[!daggByScen$FOD=="WholeRoom",]
 m<-lm(Time~FOD*Range+totalTimeTraining,data=daggByScen[!daggByScen$FOD=="Baseline",])
 summary(m)
 model_equation(m)
@@ -101,10 +106,15 @@ mbaseDat <- lm(log(Time)~log(totalTimeTraining),data=baseDat)
 
 wrDat <- daggByScen[daggByScen$FOD=="WholeRoom",]
 mwrDat<- lm(log(Time)~log(totalTimeTraining),data=wrDat)
-
+wr2Dat <- wrDat[wrDat$Range=="2",]
+wr3Dat <- wrDat[wrDat$Range=="3",]
+wr4Dat <- wrDat[wrDat$Range=="4",]
 
 corrDat <- daggByScen[daggByScen$FOD=="Corridor",]
 mcorrDat<- lm(log(Time)~log(totalTimeTraining),data=corrDat)
+corr2Dat <- corrDat[corrDat$Range=="2",]
+corr3Dat <- corrDat[corrDat$Range=="3",]
+corr4Dat <- corrDat[corrDat$Range=="4",]
 
 ###----------------Plots data----------------###
 lower_ci <- function(mean, se, n, conf_level = 0.95){
@@ -117,27 +127,94 @@ upper_ci <- function(mean, se, n, conf_level = 0.95){
 daggByDFR<-daggByScen %>%group_by(FOD,day,Range)%>%summarize(totalTimeTraining=max(totalTimeTraining),avgTime=mean(Time),ssd = sd(Time),count=n(),se = ssd / sqrt(count))%>%mutate(lower_ci=lower_ci(avgTime,se,count),upper_ci=upper_ci(avgTime,se,count))
 
 #Learning curve
+totalTimeTraining=1:6000
+#Set to summary variables 
+FOD = "Baseline"
+Range="1"
+b=21.45979
+z= -0.06329
+#This is the Time fed into dxf
+Time<- b*totalTimeTraining^z
+baseDatxf=as.data.frame(totalTimeTraining)
+baseDatxf=cbind(baseDatxf,Time)
+baseDatxf=cbind(baseDatxf,FOD)
+baseDatxf=cbind(baseDatxf,Range)
+
+FOD = "Corridor" 
+Range="2"
+b=31.32990
+z=-0.10500
+Time<- b*totalTimeTraining^z
+corr2Datxf=as.data.frame(totalTimeTraining)
+corr2Datxf=cbind(corr2Datxf,Time)
+corr2Datxf=cbind(corr2Datxf,FOD)
+corr2Datxf=cbind(corr2Datxf,Range)
+
+Range="3"
+b=54.72364
+z=-0.17482
+Time<- b*totalTimeTraining^z
+corr3Datxf=as.data.frame(totalTimeTraining)
+corr3Datxf=cbind(corr3Datxf,Time)
+corr3Datxf=cbind(corr3Datxf,FOD)
+corr3Datxf=cbind(corr3Datxf,Range)
+
+Range="4"
+b=9.81972
+z=0.03528
+Time<- b*totalTimeTraining^z
+corr4Datxf=as.data.frame(totalTimeTraining)
+corr4Datxf=cbind(corr4Datxf,Time)
+corr4Datxf=cbind(corr4Datxf,FOD)
+corr4Datxf=cbind(corr4Datxf,Range)
 
 
+FOD = "WholeRoom"
+Range="2"
+b=37.2835	
+z=-0.1273
+Time<- b*totalTimeTraining^z
+wr2Datxf=as.data.frame(totalTimeTraining)
+wr2Datxf=cbind(wr2Datxf,Time)
+wr2Datxf=cbind(wr2Datxf,FOD)
+wr2Datxf=cbind(wr2Datxf,Range)
 
+Range="3"
+b=47.50384	
+z=-0.15325
+Time<- b*totalTimeTraining^z
+wr3Datxf=as.data.frame(totalTimeTraining)
+wr3Datxf=cbind(wr3Datxf,Time)
+wr3Datxf=cbind(wr3Datxf,FOD)
+wr3Datxf=cbind(wr3Datxf,Range)
 
+Range="4"
+b=54.86090	
+z=-0.16613
+Time<- b*totalTimeTraining^z
+wr4Datxf=as.data.frame(totalTimeTraining)
+wr4Datxf=cbind(wr4Datxf,Time)
+wr4Datxf=cbind(wr4Datxf,FOD)
+wr4Datxf=cbind(wr4Datxf,Range)
 
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Data information
-Here goes the explanaion of our data in regards to what we logged and how is is structured.
-
-Below a summary of our data is presente:
+Below, a summary of our data is presented. In total, 420 tests were completed over three days (140 per day), using three different Field Of Detections (FOD - Baseline, WholeRoom and Corridor), with exception of WholeRoom and Corridor differing between three ranges (two, three and four meters), as Baseline represents the original wite cane. Scenarios describe the amount of different parkours the system was tested on (each condition with different lengths). In addition, each test logged the speed of the participant, the amount of objects detected by the cane, the amount of collisions by the user and the completion time of the individual parkours.
 ```{r first summary, echo=FALSE}
 
 summary(daggByScen)
+
+#kable(summary(daggByScen[1:16]), caption = "Data")
 # summary(nameOfDataFile)
 #Shows a table of the data (e.g. could be the coefficients for completion time to FOD compairson)
 ```
 
 
 ## Predicition of course completion time
+The plot below shows the average time of completion of scenarios, over the course of the total time the user was training, using the system. Inspecting the x-axis, one can tell that the totalTimeTraining seems to differ between the FOD's. The cause is the order in which the different FOD's were tested over the three days, which ended up placing the Corridor in the middel of the dataset, leaving the Baseline and WholeRoom with more total training time on the final day.
+<!--
 Splitting the data up into different models for predection of completion time, the following coefficients were extracetd from each model.
 
 Baseline data:
@@ -151,26 +228,347 @@ coef(lm(Time ~ totalTimeTraining, data = wrDat))
 ```
 
 Corrdiro data
-```{r corrData summary, echo=FALSE}
+```{r corrData summary, echo=FALSE, message=FALSE}
 coef(lm(Time ~ totalTimeTraining, data = corrDat))
 ```
+-->
 
-
-
-```{r , echo=FALSE, error=FALSE}
+```{r Training time over scenario time, echo=FALSE, error=FALSE, message=FALSE, fig.height=10, fig.width=10}
 #Figure has an error
-ggplot(daggByDFR,aes(x=totalTimeTraining,y=avgTime,color=factor(Range),shape=factor(Range)))+
+traonOScenplot<-ggplot(daggByDFR,aes(x=totalTimeTraining,y=avgTime,color=factor(Range),shape=factor(Range)))+
   geom_point()+ 
   geom_smooth(size=0)+ 
   geom_errorbar(aes(ymin=lower_ci, ymax=upper_ci))+
   stat_smooth(method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
   theme_bw()+
   facet_grid(cols=vars(FOD))
+
+suppressWarnings(print(traonOScenplot))
 ```
 
 
-The heatmap shows the avg. speed per scenario for the different FODS with different ranges.
-```{r, HmAvgspdScen}
+Bacause our predicitons were that FOD Corridor would perform better than FOD WholeRoom over time, we calculated coefficients for predicting the avgTime over totalTimeTraining, by sorting the aggregated data by FOD and Range - hence the following paramters for estimations were made:
+**Note: FOD Corridor with a range of 4 meters gives the impression of getting worse over time, which is due to some immediate well achived run on the first day. In addition, the data contains some outliers which will need further investigation.**
+
+###### Baseline data
+```{r BaseData summary, echo=FALSE, error=FALSE}
+summary(nls(Time ~ b*totalTimeTraining^z,
+            start = list(b = 1, z = 1),
+            data = baseDat))
+```
+
+###### Corridor 2 meters data
+```{r Corridor2mData summary, echo=FALSE, error=FALSE}
+summary(nls(Time ~ b*totalTimeTraining^z,
+            start = list(b = 1, z = 1),
+            data = corr2Dat))
+```
+
+###### Corridor 3 meters data
+```{r Corridor3mData summary, echo=FALSE, error=FALSE}
+summary(nls(Time ~ b*totalTimeTraining^z,
+            start = list(b = 1, z = 1),
+            data = corr3Dat))
+```
+
+###### Corridor 4 meters data
+```{r Corridor4mData summary, echo=FALSE, error=FALSE}
+summary(nls(Time ~ b*totalTimeTraining^z,
+            start = list(b = 1, z = 1),
+            data = corr4Dat))
+```
+
+###### WholeRoom 2 meters data
+```{r WholeRoom2mData summary, echo=FALSE, error=FALSE}
+summary(nls(Time ~ b*totalTimeTraining^z,
+            start = list(b = 1, z = 1),
+            data = wr2Dat))
+
+```
+
+###### WholeRoom 3 meters data
+```{r WholeRoom3mData summary, echo=FALSE, error=FALSE}
+summary(nls(Time ~ b*totalTimeTraining^z,
+            start = list(b = 1, z = 1),
+            data = wr3Dat))
+```
+
+###### WholeRoom 4 meters data
+```{r WholeRoom4mData summary, echo=FALSE, error=FALSE}
+summary(nls(Time ~ b*totalTimeTraining^z,
+            start = list(b = 1, z = 1),
+            data = wr4Dat))
+```
+
+
+Feeding these estimation standars into the same formula used to gather the coefficients: $b*totalTimeTraining^z$ and pairing them with an interval of $1:6000$, we were able ot create curves predicting each FOD with their respective Range's improvement over time.
+Plotting these new predictions onto the data, we see that FOD WholeRoom "recieves" a penalty as the Range increases, indicating, looking further ahead means slower completion time. Another aspect is that FOD Corridor seems to be at best with a Range of three meters, and also outperform FOD WholeRoom over training time
+
+```{r Training time over scenario stretched ,echo=FALSE, error=FALSE, message=FALSE, fig.height=10, fig.width=10}
+ggplot(daggByScen, aes(x=totalTimeTraining, y=Time, colour=factor(Range)))+
+  geom_point()+ theme_bw()+
+  geom_line(data=baseDatxf)+
+  geom_line(data=corr2Datxf)+
+  geom_line(data=corr3Datxf)+
+  geom_line(data=corr4Datxf)+
+  geom_line(data=wr2Datxf)+
+  geom_line(data=wr3Datxf)+
+  geom_line(data=wr4Datxf)+
+    facet_grid(cols=vars(FOD))+
+    ylim(0,30)
+
+```
+
+
+
+To further inspect the time used for completing each scenario, the following heatmap shows average completion time per scenario for the different FOD's with different ranges. Here the outliers stand out, in terms of scenario 19 in FOD Corridor day one and scenario five in DOF Baseline day two. Noteworthy is also day one of FOD WholeRoom, which is slower, compared to the other FOD's.
+
+```{r TimePerScenarioHM, echo=FALSE, message=FALSE, warning=FALSE, fig.height=10, fig.width=10}
+ggplot(daggByScen, aes(x = Range, y = Scenario)) + 
+  geom_tile(aes(fill = Time)) + 
+  geom_text(aes(fill = daggByScen$Time, label = round(daggByScen$Time, 2))) + 
+  scale_fill_gradient2(low = muted("red"), 
+                       mid = "yellow", 
+                       high = muted("green"), 
+                       midpoint = 0.75) + 
+  theme(panel.grid.major.x=element_blank(), 
+        panel.grid.minor.x=element_blank(), 
+        panel.grid.major.y=element_blank(), 
+        panel.grid.minor.y=element_blank(),
+        panel.background=element_rect(fill="white"), 
+        axis.text.x = element_text(angle=0, hjust = 1,vjust=1,size = 12,face = "bold"),
+        plot.title = element_text(size=16,face="bold"),
+        axis.text.y = element_text(size = 12,face = "bold")) + 
+  ggtitle("HeatMap Over Time per Scenario") + 
+  theme(legend.title=element_text(face="bold", size=10)) + 
+  scale_y_continuous(trans = "reverse")+
+  labs(fill="Time in s") +
+  facet_grid(cols=vars(FOD), row=vars(day))
+```
+
+
+\pagebreak
+
+## Collisions and Detections
+The following table sums up the average objectCollisions and objectDectections for each FOD and respective Range, in total and over the three individual days. 
+
+FOD w. Range | Total avg. Det. | Total avg. Coll.| avg. Det. Day 1  | avg. Det. Day 2  | avg. Det. Day 3  | avg. Coll. Day 1 | avg. Coll. Day 2 | avg. Coll. Day 3 |
+-------------|-----------------|-----------------|------------------|------------------|------------------|------------------|------------------|------------------|
+Baseline  R1 |       7.26      |       1.47      |         9        |       6.3        |        6.5       |        1.4       |       1.4        |       1.6        |
+Corridor  R2 |       7.01      |       1.05      |        6.2       |       7.5        |        7.35      |        0.9       |       1.15       |       1.1        |
+Corridor  R3 |       7.95      |       1.1       |        7.5       |       8.6        |        7.75      |        1.25      |       1.1        |       0.95       |
+Corridor  R4 |       7.52      |       1.25      |        6.55      |       7.85       |        8.15      |        1.5       |       1.3        |       0.95       |
+WholeRoom R2 |       9         |       0.93      |       11.15      |       8.05       |        7.8       |        1.25      |       0.6        |       0.95       |
+WholeRoom R3 |      12.53      |       1.03      |       14.05      |      12.35       |       11.12      |        1         |       1.25       |       0.85       |
+WholeRoom R4 |      12.78      |       1.03      |       14.05      |      11.2        |       13.1       |        1.15      |       1.1        |       0.85       |
+
+
+Inspecting the table, a minor noticeable difference in average detections and collisions is seen when increasing Range in FOD Wholeroom. FOD Baseline lays very close to FOD Corrdior, when looking at average detections, however, collisions seem to be one of the tradeoffs of looking only one meter ahead. 
+P-values were calculated using anova-tests for each FOD and it's respective ranges, and for comparing the baseline to the other FOD's as an average, since the baseline does not have multiple ranges.
+
+
+#Cannot do this - no diif. in Range---------------------------------
+###### Corridor objectCollisions p-value
+```{r Anova_objectColl. over Range: Corrdior, echo=FALSE, message=FALSE, warning=FALSE}
+anova(lm(Range ~ objectCollisions ,data=corrDat,))
+```
+
+
+###### WholeRoom objectCollisions p-value
+```{r Anova_objectColl. over Range: Wholeroom, echo=FALSE, message=FALSE, warning=FALSE}
+anova(lm(Range ~ objectCollisions ,data=wrDat))
+```
+
+
+###### Baseline vs Corridor objectCollisions p-value
+```{r Anova_objectColl. over Range: Baseline vs Corridor, echo=FALSE, message=FALSE, warning=FALSE}
+anova(lm(Range ~ objectCollisions ,data=daggByScenWOBLW))
+```
+
+
+###### Baseline vs WholeRoom objectCollisions p-value
+```{r Anova_objectColl. over Range: Baseline vs WholeRoom, echo=FALSE, message=FALSE, warning=FALSE}
+anova(lm(Range ~ objectCollisions ,data=daggByScenWOBLC))
+```
+
+
+###### Corridor vs WholeRoom objectCollisions p-value
+```{r Anova_objectColl. over Range: Corridor vs WholeRoom, echo=FALSE, message=FALSE, warning=FALSE}
+anova(lm(Range ~ objectCollisions ,data=daggByScenWOBL))
+```
+
+
+
+###### Cross compairison objectCollisions p-value
+```{r Anova_objectColl. over Range: All, echo=FALSE, message=FALSE, warning=FALSE}
+## BaseDat cannot because only one length
+## Therefore, basedat has to be compared to the others
+anova(lm(Range ~ objectCollisions ,data=daggByScen))
+```
+
+
+
+
+
+#Cannot do this - no diif. in Range---------------------------------
+###### Corridor objectDetected p-value
+```{r Anova_objectDetec. over Range: Corridor, echo=FALSE, message=FALSE, warning=FALSE}
+anova(lm(Range ~ objectDetected ,data=corrDat))
+```
+
+###### WholeRoom objectDetected p-value
+```{r Anova_objectDetec. over Range: WholeRoom, echo=FALSE, message=FALSE, warning=FALSE}
+anova(lm(Range ~ objectDetected ,data=wrDat))
+```
+
+
+###### Baseline vs Corridor objectDetected p-value
+```{r Anova_objectDetec. over Range: Baseline vs Corridor, echo=FALSE, message=FALSE, warning=FALSE}
+anova(lm(Range ~ objectDetected ,data=daggByScenWOBLW))
+```
+
+
+###### Baseline vs WholeRoom objectDetected p-value
+```{r Anova_objectDetec. over Range: Baseline vs WholeRoom, echo=FALSE, message=FALSE, warning=FALSE}
+anova(lm(Range ~ objectDetected ,data=daggByScenWOBLC))
+```
+
+
+###### Corridor vs WholeRoom objectDetected p-value
+```{r Anova_objectDetec. over Range: Corridor vs WholeRoom, echo=FALSE, message=FALSE, warning=FALSE}
+anova(lm(Range ~ objectDetected ,data=daggByScenWOBL))
+```
+
+
+
+###### Cross compairison objectDetections p-value
+```{r Anova_objectDetec. over Range: All: Corridor, echo=FALSE, message=FALSE, warning=FALSE}
+anova(lm(Range ~ objectDetected ,data=daggByScen))
+```
+
+
+
+
+
+
+
+
+Running anova-tests across the individual FOD's and across, we see that 
+
+ 
+FOD                                | p-value avg. Detec. | p-value avg. Coll.| 
+-----------------------------------|---------------------|-------------------| 
+Corridor                           |       0.4105        |       0.2899      | 
+WholeRoom                          |       0.0003019     |       0.5638      | 
+Corridor vs. WholeRoom             |       0.001133      |       0.2414      |
+Baseline vs. Corridor              |       0.393         |       0.3208      |
+Baseline vs. WholeRoom             |       0.001133      |       0.03569     |
+Baseline vs. Corridor vs. WholeRoom|       0.001133      |       0.2772      |
+
+
+
+
+Below a plot illustrates the above table, showing the increase and decrease of detections and collisions for each FOD with their respective ranges, over the three testing days.
+
+```{r Collisions and detections over days, echo=FALSE, message=FALSE, warning=FALSE, fig.height=10, fig.width=10}
+ggplot(daggByScen,aes(x= day, y=objectCollisions, color=factor(Range)))+
+#geom_point()+
+  geom_smooth(aes(x=day, y=objectDetected))+
+  stat_smooth()+
+facet_grid(cols=vars(FOD))+ 
+ylab("objectCollisions (Bottom) & objectsDetected (Top)")
+```
+
+
+The heatmap below shows the amount of object collisions for each scenario, between differnt FOD's and Ranges. Noteworthy that using FOD WholeRoom, the participant managed to achieve collisions on scenario one, day one, which is supposed to be a clear walkingpath with objects spread out to the sides, making it difficult to collide with an object. A potential outlier also seems to be located in FOD Corridor day two scenario 20, however, further investigation would need to be conducted.
+```{r, HmCollprScen, echo=FALSE, message=FALSE, warning=FALSE, fig.height=10, fig.width=10}
+ggplot(daggHeat, aes(x = Range, y = Scenario)) + 
+  geom_tile(aes(fill = objectCollisions)) + 
+  geom_text(aes(fill = daggHeat$objectCollisions, label = round(daggHeat$objectCollisions, 2))) + 
+  scale_fill_gradient2(low = muted("green"), 
+                       mid = "yellow", 
+                       high = muted("red"), 
+                       midpoint = 4) + 
+  theme(panel.grid.major.x=element_blank(), 
+        panel.grid.minor.x=element_blank(), 
+        panel.grid.major.y=element_blank(), 
+        panel.grid.minor.y=element_blank(),
+        panel.background=element_rect(fill="white"), 
+        axis.text.x = element_text(angle=0, hjust = 1,vjust=1,size = 12,face = "bold"),
+        plot.title = element_text(size=16,face="bold"),
+        axis.text.y = element_text(size = 12,face = "bold")) + 
+  ggtitle("HeatMap - Collisions per Scenario") + 
+  theme(legend.title=element_text(face="bold", size=10)) + 
+  scale_y_continuous(trans = "reverse")+
+  labs(fill="Collisions") +
+  facet_grid(cols=vars(FOD), row=vars(day))
+```
+
+
+Another heatmap shows the amount of object detections for each scenario, between differnt FOD's and Ranges. Again, scenario one is very noteworthy for the few detections using FOD Baseline and Corridor, where the walking path is clear, compared to FOD Wholeroom, which conducts alot of information.
+```{r, HmDetprScen, echo=FALSE, message=FALSE, warning=FALSE, fig.height=10, fig.width=10}
+ggplot(daggHeat, aes(x = Range, y = Scenario)) + 
+  geom_tile(aes(fill = objectDetected)) + 
+  geom_text(aes(fill = daggHeat$objectDetected, label = round(daggHeat$objectDetected, 2))) + 
+  scale_fill_gradient2(low = muted("green"), 
+                       mid = "yellow", 
+                       high = muted("red"), 
+                       midpoint = 30) + 
+  theme(panel.grid.major.x=element_blank(), 
+        panel.grid.minor.x=element_blank(), 
+        panel.grid.major.y=element_blank(), 
+        panel.grid.minor.y=element_blank(),
+        panel.background=element_rect(fill="white"), 
+        axis.text.x = element_text(angle=0, hjust = 1,vjust=1,size = 12,face = "bold"),
+        plot.title = element_text(size=16,face="bold"),
+        axis.text.y = element_text(size = 12,face = "bold")) + 
+  ggtitle("HeatMap - Detections per Scenario") + 
+  theme(legend.title=element_text(face="bold", size=10)) + 
+  scale_y_continuous(trans = "reverse")+
+  labs(fill="Detections") +
+  facet_grid(cols=vars(FOD), row=vars(day))
+```
+
+
+
+Collisions and detections also have an impact on the speed the participant moves through scenarios with. Below two graphs show that the impact of collisions as well as detections both moderate the speed.
+
+```{r Collisions/DetectionsprScenario ,echo=FALSE, message=FALSE, warning=FALSE, fig.height=5, fig.width=5}
+ggplot(daggByScen,aes(y = avgSpeed, x = objectCollisions, color = factor(Range)))+
+  geom_point(aes(alpha=.1))+ 
+  geom_jitter()+
+  #geom_smooth(size=0)+
+  stat_smooth(method = 'nls', formula = 'y~a+x*b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
+  theme_bw()+
+  facet_grid(cols=vars(FOD))
+
+ggplot(daggByScen,aes(y = avgSpeed, x = objectDetected, color = factor(Range)))+
+  geom_point(aes(alpha=.1))+
+  geom_jitter()+
+  #geom_smooth(size=0)+
+  stat_smooth(method = 'nls', formula = 'y~a+x*b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
+  theme_bw()+
+  facet_grid(cols=vars(FOD))
+```
+
+
+
+
+
+
+## Speed
+
+
+Noteworthy, compared to the time it takes to complete a scenario over training time (as presented earlier), DOF Corridor with a Range of three meters becomes the fastest of the FOD Corridor Ranges on day three. However, looking at the average speed (as shown in the plot below), the corridor with a Range of two meters has a faster walking speed. This yields that a faster walking speed does not necessary mean a faster completion time.
+```{r Average speed over training time, echo=FALSE, message=FALSE, warning=FALSE, fig.height=10, fig.width=10}
+ggplot(daggByScen,aes(x=totalTimeTraining,y=avgSpeed,color=factor(Range)))+
+  geom_point(aes(alpha=.1))+ 
+  stat_smooth(method = 'nls', formula = 'y~a*x^b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
+  facet_grid(cols=vars(FOD))
+```
+
+
+```{r HmAvgspdScen, echo=FALSE, message=FALSE, warning=FALSE, fig.height=10, fig.width=10}
 ggplot(daggHeat, aes(x = Range, y = Scenario)) + 
   geom_tile(aes(fill = avgSpeed)) + 
   geom_text(aes(fill = daggHeat$avgSpeed, label = round(daggHeat$avgSpeed, 2))) + 
@@ -184,15 +582,18 @@ ggplot(daggHeat, aes(x = Range, y = Scenario)) +
         panel.grid.minor.y=element_blank(),
         panel.background=element_rect(fill="white"), 
         axis.text.x = element_text(angle=0, hjust = 1,vjust=1,size = 12,face = "bold"),
-        plot.title = element_text(size=20,face="bold"),
+        plot.title = element_text(size=16,face="bold"),
         axis.text.y = element_text(size = 12,face = "bold")) + 
-  ggtitle("HeatMap Over avgSpeed per Scenario") + 
-  theme(legend.title=element_text(face="bold", size=14)) + 
+  ggtitle("HeatMap - avgSpeed per Scenario") + 
+  theme(legend.title=element_text(face="bold", size=10)) + 
   scale_y_continuous(trans = "reverse")+
   labs(fill="avgSpeed") +
   facet_grid(cols=vars(FOD), row=vars(day))
 ```
 
 
-## Collisions per scenario
+## Analysis reflection
 
+
+
+## Analysis conclusion
