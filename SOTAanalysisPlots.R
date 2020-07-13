@@ -30,7 +30,9 @@ dataBL <- df %>%
 dataBL <- dataBL %>%
   mutate(Range = ifelse(augType == "n", 1, Range))
   
-#This is the one we are working on
+#This is the one we are working on 
+
+#group Author
 dataBL %>% 
   filter(aggMeasure == "avg") %>%
   ggplot(aes(x = TrainingTimeHours, y = value, color = factor(augType), group = factor(augType), size = factor(Range), shape = factor(subjectType))) +
@@ -46,8 +48,23 @@ dataBL %>%
   theme_bw()
 
 
+#group EMA
+dataBL %>% 
+  filter(aggMeasure == "avg") %>%
+  ggplot(aes(x = TrainingTimeHours, y = value, color = factor(augType), group = factor(augType), size = factor(Range), shape = factor(subjectType))) +
+  geom_point(aes(alpha = .1)) +
+  geom_mark_ellipse(aes(group = factor(augType), fill = augType, label = augType), size=1) +
+  geom_jitter(width=1) +
+  geom_smooth() +
+  #stat_smooth(color="red",
+  #method = 'loess',
+  # formula = 'y~a+x*b',
+  # method.args = list(start= c(a = 1,b=1)),
+  # se=FALSE)+
+  theme_bw()
 
-### Test ---
+
+### Tests can be ignored ---
 dataBL %>% 
   filter(aggMeasure =="avg") %>%
   ggplot(aes(x = Range, y = value, color = factor(augType),  size = factor(TrainingTimeHours))) +
