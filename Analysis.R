@@ -159,6 +159,12 @@ ggplot(daggByScen,aes(avgSpeed)) +
   geom_density()+
   scale_y_continuous(trans='log2')
 
+#Histogram and curve of avgSpeed
+ggplot(daggByScen, aes(x=avgSpeed)) + 
+  geom_histogram(aes(y=..density..), colour="black", fill="white")+
+  geom_density(alpha=.2, fill="#FF6666")+
+  theme_bw()
+
 #AvgSpeed per senario
 ggplot(daggByScen,aes(x=Scenario,y=avgSpeed,color=FOD,size=Range))+
   geom_point(aes(alpha=.1)) 
@@ -424,7 +430,7 @@ ggplot(daggHeat, aes(x = Range, y = Scenario)) +
   scale_fill_gradient2(low = muted("red"), 
                        mid = "yellow", 
                        high = muted("green"), 
-                       midpoint = 0.75) + 
+                       midpoint = 0.65) + 
   theme(panel.grid.major.x=element_blank(), 
         panel.grid.minor.x=element_blank(), 
         panel.grid.major.y=element_blank(), 

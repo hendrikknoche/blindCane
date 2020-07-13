@@ -20,7 +20,7 @@ output:
 
 
 ## Introduction
-This is the statistical report associated with the paper "Evaluating the detection space" by Milo Marsfeldt Skovfoged & Alexander Schiller Rasmussen. The field of study lies in researching visually impaired/blind navigation through environments, to find an ideal Range of looking ahead and Field of Detection (FOD), for the most progressive travel-route, while avoiding collisions as much as possible.
+This is the statistical report associated with the paper "Evaluating the detection space" by Milo Marsthfeldt Skovfoged & Alexander Schiller Rasmussen. The field of study lies in researching visually impaired/blind navigation through environments, to find an ideal Range of looking ahead and Field of Detection (FOD), for the most progressive travel-route, while avoiding collisions as much as possible.
 This report gives an overview of what data was gathered and analysed, in regrads to different points of interrest.
 
 ```{r setup, include=FALSE}
@@ -101,6 +101,8 @@ test<-daggByScen %>%
 daggByScenWOBL<-daggByScen[!daggByScen$FOD=="Baseline",]
 daggByScenWOBLC<-daggByScen[!daggByScen$FOD=="Corridor",]
 daggByScenWOBLW<-daggByScen[!daggByScen$FOD=="WholeRoom",]
+
+
 m<-lm(Time~FOD*Range+totalTimeTraining,data=daggByScen[!daggByScen$FOD=="Baseline",])
 summary(m)
 model_equation(m)
