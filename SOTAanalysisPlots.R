@@ -35,10 +35,10 @@ dataBL <- dataBL %>%
 #group Author
 dataBL %>% 
   filter(aggMeasure == "avg") %>%
-  ggplot(aes(x = TrainingTimeHours, y = value, color = factor(augType), group = factor(augType), size = factor(Range), shape = factor(subjectType))) +
-  geom_point(aes(alpha = .1)) +
+  ggplot(aes(x = TrainingTimeHours, y = value, color = factor(augType), group = factor(augType), size = factor(Range), shape = factor(WCsupp))) +
+  #geom_point(aes(alpha = .1)) +
+  geom_jitter(aes(alpha = .1)) +
   geom_mark_ellipse(aes(group = factor(Author), fill = Author, label = Author), size=1) +
-  geom_jitter(width=1) +
   #geom_smooth() +
   #stat_smooth(color="red",
   #method = 'loess',
@@ -51,16 +51,23 @@ dataBL %>%
 #group EMA
 dataBL %>% 
   filter(aggMeasure == "avg") %>%
-  ggplot(aes(x = TrainingTimeHours, y = value, color = factor(augType), group = factor(augType), size = factor(Range), shape = factor(subjectType))) +
-  geom_point(aes(alpha = .1)) +
-  geom_mark_ellipse(aes(group = factor(augType), fill = augType, label = augType), size=1) +
-  geom_jitter(width=1) +
-  geom_smooth() +
-  #stat_smooth(color="red",
-  #method = 'loess',
-  # formula = 'y~a+x*b',
-  # method.args = list(start= c(a = 1,b=1)),
-  # se=FALSE)+
+  ggplot(aes(x = TrainingTimeHours, 
+             y = value, 
+             color = factor(augType), 
+             group = factor(augType), 
+             size = factor(Range), 
+             shape = factor(WCsupp))) +
+  geom_mark_ellipse(aes(group = factor(augType), 
+                        fill = augType, 
+                        label = augType), 
+                    size = 1) +
+  geom_jitter(aes(alpha = .1)) +
+  geom_smooth(aes(group = 1), 
+              method = 'lm', 
+              #fullrange = TRUE,
+              #method.args = list(formula = y~a*exp(b/x), start=list(a=1, b=0.1))
+              #formula = 'y~a*x^b'
+              ) +
   theme_bw()
 
 
