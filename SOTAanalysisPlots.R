@@ -111,3 +111,9 @@ dataBL %>%
   #se=FALSE) +
   theme_bw()
 
+# quick check on predicting speed from augTypes, range, and training time 
+model<-lm(value~TrainingTimeHours*Range*factor(augType),dataBL)
+summary(model)
+step(model)
+#apparently none of the vars significantly predicts speed  
+
