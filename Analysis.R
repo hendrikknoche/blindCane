@@ -16,14 +16,32 @@ library(ggimage)
 #Load all data files
 load('data_all.rda')
 
-onsets<- df %>% 
-  filter(objDet==1) %>% select(ObjDetID,VibStartTime=RunningTime) 
+
+# analysis on how detections affect speed
+onsets <- df %>% 
+  filter(objDet == 1) %>% 
+  select(ObjDetID, VibStartTime = RunningTime) 
 
 dfv<-merge(df,onsets)
-dfv$TimeSinceVibStart<-dfv$RunningTime-dfv$VibStartTime
+dfv$TimeSinceVibStart <- dfv$RunningTime - dfv$VibStartTime
+
+df$ObjDetChangeHlp <- lag(df$Object_detected)
+
+
+
 
 #Data Grouped by Snario
-daggByScen <- df %>% filter(Person_Speed<3)%>%group_by(testID,day,Scenario,FOD,Range)%>%summarize(avgSpeed=mean(Person_Speed),medianSpeed=median(Person_Speed),maxSpeed=max(Person_Speed),minSpeed=min(Person_Speed),objectDetected=sum(objDet,na.rm = TRUE),objectCollisions=sum(objColl,na.rm = TRUE),Time=max(Time_in_MS*1000))%>% arrange(testID)
+daggByScen <- df %>% 
+  filter(Person_Speed<3)%>%
+  group_by(testID,day,Scenario,FOD,Range)%>%
+  summarize(avgSpeed=mean(Person_Speed),
+            medianSpeed=median(Person_Speed),
+            maxSpeed=max(Person_Speed),
+            minSpeed=min(Person_Speed),
+            objectDetected=sum(objDet,na.rm = TRUE),
+            objectCollisions=sum(objColl,na.rm = TRUE),
+            Time=max(Time_in_MS*1000))%>% 
+  arrange(testID)
 
 #add Coloum with sum of total time spent 
 daggByScen$totalTimeTraining<-round(cumsum(daggByScen$Time))
@@ -39,11 +57,9 @@ daggByScen <- daggByScen%>%group_by(day)%>%mutate(timeDtrain=round(cumsum(Time))
 daggByCol <- df %>% filter(Person_Speed<3)%>%group_by(testID,day,Scenario,FOD,Range,objColl)%>%summarize(avgSpeed=mean(Person_Speed),medianSpeed=median(Person_Speed),maxSpeed=max(Person_Speed),minSpeed=min(Person_Speed),objectDetected=sum(objDet,na.rm = TRUE),objectCollisions=sum(objColl,na.rm = TRUE),Time=max(Time_in_MS*1000))%>% arrange(testID)
 
 
-# analysis on how detections affect speed
-onsets<- df %>% 
-  filter(objDet==1) %>% select(ObjDetID,timeSinceStart)
 
-df$ObjDetChangeHlp <- la g(df$Object_detected)
+
+
 
 
 # helper= read.csv('DataRepair.csv',sep=";")

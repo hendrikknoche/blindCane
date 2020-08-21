@@ -14,8 +14,11 @@ df$testID<-as.numeric(gsub("[^0-9.-]", "", substr(df$File,7,10)))
 #Delete Test.ID Columns as the fist 18 are wrong
 df$Test.ID<-NULL
 
-#Make a total time in milliseconds
-df$timeSinceStart<-as.double(substr(df$Timer,9,16))*1000
+
+df<-df[order(df$testID),]
+
+#Make a total time in seconds
+#df$timeSinceStart<-as.double(substr(df$Timer,9,16))
 
 #Rearrange the columns 
 df<-df[,c(18:21,23,1:17,22)]
@@ -29,28 +32,30 @@ df<-rename(df, day = Day_nr.)
 
 #count collisions
 df$Object_collision<-gsub('null', '', df$Object_collision)
-df$objBefore<-c('',df[1:(nrow(df)-1),]$Object_collision)
+df$objcollBefore<-c('',df[1:(nrow(df)-1),]$Object_collision)
 df$objColl<-ifelse(substr(df$Object_collision,1,1)=="B" & df$objBefore=='',1,0)
 
 #count detections
 df$Object_detected<-gsub('null', '', df$Object_detected)
-df$objDetectBefore<-c('',df[1:(nrow(df)-1),]$Object_detected) 
-df$objDet<-ifelse(substr(df$Object_detected,1,1)=="B" & df$objDetectBefore=='',1,0)
+df$objDetBefore<-c('',df[1:(nrow(df)-1),]$Object_detected) 
+df$objDet<-ifelse(substr(df$Object_detected,1,1)=="B" & df$objDetBefore=='',1,0)
 
 #Use time stamp to calculate how long a test took
-df$Time_stamp<- as.POSIXct(df$Time_stamp,format="%m/%d/%Y %H:%M:%S")
-df<-df[order(df$Time_stamp),]
+df$Time_stamp<- as.POSIXct(df$Time_stamp, format="%m/%d/%Y %H:%M:%S")
+#df<-df[order(df$Time_stamp),]
 
-#no idea how this work
-df$timeSinceExpStarted<-time(df$Time_stamp) -min(time(df$Time_stamp))
+#This looks like it is just counting up at each row.
+df$timeSinceExpStarted<-time(df$Time_stamp) - min(time(df$Time_stamp))
 
 #convert the timer into time in seconds
-df$TimeMil <- as.POSIXct(df$Timer, format="%H:%M:%OS")
-df$TimeMil <- second(df$TimeMil)
+df$Time_in_MS <- as.POSIXct(df$Timer, format="%H:%M:%OS")
+df$Time_in_MS <- second(df$Time_in_MS)
+
+#Make a total time in seconds
+#df$timeSinceStart<-as.double(substr(df$Timer,1,16))
 
 
-
-df$NewTimer<-lag(df$TimerMil,1)
+df$NewTimer<-lag(df$Time_in_MS,1)
 df$ScenarioBefore<-lag(df$Scenario,default=99999)
 df$ScenarioStarts<-ifelse(!(df$Scenario==df$ScenarioBefore),1,0)
 df$RunningScenarioCounter <-cumsum(df$ScenarioStarts)
@@ -63,11 +68,11 @@ df$RunningScenarioCounter <-cumsum(df$ScenarioStarts)
 
 # add consistentTimeline
 
-df$ObjDetID<-cumsum(df$objDet)
-df$RunningTime <- cumsum(df$TimeMil*1000)
+df$ObjDetID <- cumsum(df$objDet)
+df$RunningTime <- cumsum(df$Time_in_MS)
 
 
-df$ObjDetChangeHlp <- lag(df$Object_detected)
+#df$ObjDetChangeHlp <- lag(df$Object_detected)
 
 save(df, file='data_all.rda', compress=TRUE)
 
