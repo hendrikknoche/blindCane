@@ -20,7 +20,7 @@ load('data_all.rda')
 # analysis on how detections affect speed
 onsets <- df %>% 
   filter(objDet == 1) %>% 
-  select(ObjDetID, VibStartTime = RunningTime) 
+  select(ObjDetID,VibStartTime=RunningTime,SpeedAtVibStart=Person_Speed) 
 
 dfv<-merge(df,onsets)
 dfv$TimeSinceVibStart <- dfv$RunningTime - dfv$VibStartTime
@@ -28,7 +28,7 @@ dfv$TimeSinceVibStart <- dfv$RunningTime - dfv$VibStartTime
 df$ObjDetChangeHlp <- lag(df$Object_detected)
 
 
-
+dfv %>% filter(TimeSinceVibStart<4) %>% ggplot(aes(x=TimeSinceVibStart,y=SpeedDiffFromVibStart))+geom_line()
 
 #Data Grouped by Snario
 daggByScen <- df %>% 
