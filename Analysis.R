@@ -8,6 +8,7 @@ library(ggpubr)
 library(grid)
 library(png)
 library(ggimage)
+library(zoo)
 #library(plyr)
 #Removing data
 # "rm('name of dataset')"
@@ -20,16 +21,21 @@ load('data_all.rda')
 # analysis on how detections affect speed
 onsets <- df %>% 
   filter(objDet == 1) %>% 
-  select(ObjDetID,VibStartTime=RunningTime,SpeedAtVibStart=Person_Speed) 
+  select(ObjDetID,VibStartTime=RunningTime,SpeedAtVibStart=rollingSpeedMedian) 
 
 dfv<-merge(df,onsets)
 dfv$TimeSinceVibStart <- dfv$RunningTime - dfv$VibStartTime
-
+dfv$SpeedDiffFromStart <- dfv$rollingSpeedMedian-dfv$SpeedAtVibStart
 df$ObjDetChangeHlp <- lag(df$Object_detected)
 
 
-dfv %>% filter(TimeSinceVibStart<4) %>% ggplot(aes(x=TimeSinceVibStart,y=SpeedDiffFromVibStart))+geom_line()
-
+dfv %>% filter(TimeSinceVibStart<4 & TimeSinceVibStart>0) %>% ggplot(aes(x=TimeSinceVibStart,y=rollingSpeedMedian))+geom_line(alpha=.04)+facet_grid(rows=vars(FOD))+theme_bw()
+dfv %>% filter(TimeSinceVibStart<4 & TimeSinceVibStart>0) %>% ggplot(aes(x=TimeSinceVibStart,y=rollingSpeedMedian))+geom_point(alpha=.1,size=.5)+facet_grid(rows=vars(FOD))+geom_smooth()+theme_bw()
+dfv %>% filter(TimeSinceVibStart<4 & TimeSinceVibStart>0) %>% ggplot(aes(x=TimeSinceVibStart,y=SpeedDiffFromStart))+geom_point(alpha=.1,size=.5)+facet_grid(rows=vars(FOD))+geom_smooth()+theme_bw()
+dfv %>% filter(TimeSinceVibStart<4 & TimeSinceVibStart>0) %>% ggplot(aes(x=TimeSinceVibStart,y=SpeedDiffFromStart,colour=FOD))+geom_smooth()+theme_bw()
+dfv %>% filter(TimeSinceVibStart<4 & TimeSinceVibStart>0) %>% ggplot(aes(x=TimeSinceVibStart,y=rollingSpeedMedian,colour=FOD))+geom_smooth()+theme_bw()+facet_grid(cols=vars(Range))
+dfv %>% filter(TimeSinceVibStart<4 & TimeSinceVibStart>0) %>% ggplot(aes(x=TimeSinceVibStart,y=rollingSpeedMedian,colour=FOD))+geom_smooth()+theme_bw()+facet_grid(cols=vars(day))
+dfv %>% filter(TimeSinceVibStart<4 & TimeSinceVibStart>0) %>% ggplot(aes(x=TimeSinceVibStart,y=rollingSpeedMedian,colour=factor(day)))+geom_smooth()+theme_bw()
 #Data Grouped by Snario
 daggByScen <- df %>% 
   filter(Person_Speed<3)%>%

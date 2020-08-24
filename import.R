@@ -45,7 +45,7 @@ df$Time_stamp<- as.POSIXct(df$Time_stamp, format="%m/%d/%Y %H:%M:%S")
 #df<-df[order(df$Time_stamp),]
 
 #This looks like it is just counting up at each row.
-df$timeSinceExpStarted<-time(df$Time_stamp) - min(time(df$Time_stamp))
+#df$timeSinceExpStarted<-time(df$Time_stamp) - min(time(df$Time_stamp))
 
 #convert the timer into time in seconds
 df$Time_in_MS <- as.POSIXct(df$Timer, format="%H:%M:%OS")
@@ -69,10 +69,16 @@ df$RunningScenarioCounter <-cumsum(df$ScenarioStarts)
 # add consistentTimeline
 
 df$ObjDetID <- cumsum(df$objDet)
-df$RunningTime <- cumsum(df$Time_in_MS)
+df$RunningTime <- df$Time_in_MS
 
 
 #df$ObjDetChangeHlp <- lag(df$Object_detected)
+
+
+#create a row number to keep track of things
+df$rowNum<-1:nrow(df)
+# create median smoothed speed column 
+df %<>% group_by(testID) %>% mutate(rollingSpeedMedian=rollmedian(x=Person_Speed,k=5,fill=NA,align = "left"))%>%ungroup()
 
 save(df, file='data_all.rda', compress=TRUE)
 
