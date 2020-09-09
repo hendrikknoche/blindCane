@@ -25,6 +25,7 @@ dfp$FOD<-as.factor(dfp$FOD)
 #Rename Columns
 dfp<-rename(dfp, Range = Detection_range_in_Meters) 
 dfp<-rename(dfp, day = Day_nr.) 
+dfp<-rename(dfp, ParticipantID = Participant.ID) 
 
 #count collisions
 dfp$Object_collision <- gsub('null', '', dfp$Object_collision)
@@ -76,6 +77,21 @@ dfp$RunningTime <- dfp$Time_in_S
 dfp$rowNum<-1:nrow(dfp)
 # create median smoothed speed column 
 dfp %<>% group_by(testID) %>% mutate(rollingSpeedMedian=rollmedian(x=Person_Speed,k=5,fill=NA,align = "left"))%>%ungroup()
+
+dfp$Range[dfp$Range == "0.7"] <- "1"
+
+
+dfp$ParticipantID <-ifelse(dfp$testID > 420 & dfp$testID < 446, 2, dfp$ParticipantID)  
+dfp$ParticipantID <-ifelse(dfp$testID > 445 & dfp$testID < 471, 3, dfp$ParticipantID)  
+dfp$ParticipantID <-ifelse(dfp$testID > 470 & dfp$testID < 496, 4, dfp$ParticipantID)  
+dfp$ParticipantID <-ifelse(dfp$testID > 495 & dfp$testID < 521, 5, dfp$ParticipantID) 
+dfp$ParticipantID <-ifelse(dfp$testID > 520 & dfp$testID < 546, 6, dfp$ParticipantID)  
+dfp$ParticipantID <-ifelse(dfp$testID > 545 & dfp$testID < 571, 7, dfp$ParticipantID) 
+dfp$ParticipantID <-ifelse(dfp$testID > 570 & dfp$testID < 596, 8, dfp$ParticipantID)
+dfp$ParticipantID <-ifelse(dfp$testID > 595 & dfp$testID < 621, 9, dfp$ParticipantID) 
+dfp$ParticipantID <-ifelse(dfp$testID > 620 & dfp$testID < 646, 10, dfp$ParticipantID)  
+dfp$ParticipantID <-ifelse(dfp$testID > 645 & dfp$testID < 671, 11, dfp$ParticipantID) 
+
 
 save(dfp, file='data_all_Participants.rda', compress=TRUE)
 

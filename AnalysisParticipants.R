@@ -25,34 +25,37 @@ library(grid)
 library(png)
 library(ggimage)
 library(zoo)
+library(afex)  
+library(emmeans)
+
 
 # GetData
-load("data_all_Training.rda")
+load("data_all_Participants.rda")
 
-#Data Grouped by Snario
-daggByScen <- df %>% 
+#Data Grouped by Scenario
+daggByScenPart <- dfp %>% 
   filter(Person_Speed<3)%>%
-  group_by(testID,day,Scenario,FOD,Range)%>%
-  summarize(avgSpeed=mean(Person_Speed),
-            medianSpeed=median(Person_Speed),
-            maxSpeed=max(Person_Speed),
-            minSpeed=min(Person_Speed),
-            objectDetected=sum(objDet,na.rm = TRUE),
-            objectCollisions=sum(objColl,na.rm = TRUE),
-            Time=max(Time_in_MS))%>% 
+  group_by(ParticipantID, testID, Scenario, FOD, Range)%>%
+  summarize(avgSpeed = mean(Person_Speed),
+            medianSpeed = median(Person_Speed),
+            maxSpeed = max(Person_Speed),
+            minSpeed = min(Person_Speed),
+            objectDetected = sum(objDet,na.rm = TRUE),
+            objectCollisions = sum(objColl,na.rm = TRUE),
+            Time = max(Time_in_S))%>% 
   arrange(testID)
 
 #add Coloum with sum of total time spent 
-daggByScen$totalTimeTraining<-round(cumsum(daggByScen$Time))
+daggByScenPart$totalTimeTraining<-round(cumsum(daggByScenPart$Time))
 
 #add Coloum with total time spent for a given FOD with a given Range
-daggByScen <- daggByScen%>%group_by(FOD,day,Range)%>%mutate(timeFDRtrain=round(cumsum(Time)))
+daggByScenPart <- daggByScenPart%>%group_by(FOD,day,Range)%>%mutate(timeFDRtrain=round(cumsum(Time)))
 
 #add Coloum with total time spent for a given FOD
-daggByScen <- daggByScen%>%group_by(FOD,day)%>%mutate(timeFDtrain=round(cumsum(Time)))
+daggByScenPart <- daggByScenPart%>%group_by(FOD,day)%>%mutate(timeFDtrain=round(cumsum(Time)))
 
 #add Coloum with total time spent for a given Day
-daggByScen <- daggByScen%>%group_by(day)%>%mutate(timeDtrain=round(cumsum(Time)),totalTimeTrainingHrs=totalTimeTraining/3600)
+daggByScenPart <- daggByScenPart%>%group_by(day)%>%mutate(timeDtrain=round(cumsum(Time)),totalTimeTrainingHrs=totalTimeTraining/3600)
 
 # Make functions
 lower_ci <- function(mean, se, n, conf_level = 0.95){
@@ -64,7 +67,9 @@ upper_ci <- function(mean, se, n, conf_level = 0.95){
 
 # Below, a summary of our data. In total, 420 tests were completed over three days (140 per day), using three different Field Of Detections (FOD - Baseline, WholeRoom and Corridor). The WholeRoom and Corridor differ between three ranges (two, three and four meters), while the Baseline represents the original white cane (one meter range). Scenarios describe the obstacle courses the system was tested on (20 different scenarios). In addition, each test logged the walking speed of the participant, the amount of objects detected by the cane/EMA, the amount of collisions by the user and the completion time of the individual obstacle courses.
 
-summary(daggByScen)
+summary(daggByScenPart)
+
+summary(aov(avgSpeed ~ Range * FOD + Error(ParticipantID), data = daggByScenPart))
 
 ## Walking speed =================================
 
@@ -75,7 +80,7 @@ summary(daggByScen)
 # To get an overview of the walking speed we first made a histogram with a density curve to see how our data is distributed
 
 # Histogram and curve of avgSpeed
-ggplot(daggByScen, aes(x = avgSpeed)) +
+ggplot(daggByScenPart, aes(x = avgSpeed)) +
   geom_histogram(aes(y = ..density..), colour = "black", fill = "white") +
   geom_density(alpha = .2, fill = "#FF6666") +
   geom_vline(aes(xintercept = mean(avgSpeed)), color = "blue", linetype = "dashed", size = 1) +
@@ -83,16 +88,16 @@ ggplot(daggByScen, aes(x = avgSpeed)) +
 
 # As we can see the data is close to by not quite normally distributed, a Shapiro Wilks test confirms this as the p-values show a significant difference and, thereby rejects the nullhypothesis of the data following a normal distributed.
 
-shapiro.test(daggByScen$avgSpeed)
+shapiro.test(daggByScenPart$avgSpeed)
 
 # A qq-plots also shows that the date is close to normal distributed with only a few outliers that was a lot faster than the rest.
 
-qqPlot(daggByScen$avgSpeed)
+qqPlot(daggByScenPart$avgSpeed)
 
 #To get a better overview of the outliers we made a heatmap of the 420 test to see if we could locate the outliers.
 
 # Data Frame for heatmap table
-daggHeat <- daggByScen %>%
+daggHeat <- daggByScenPart %>%
   group_by(Scenario, FOD, Range, day)
 
 # Heatmap table over avgSpeed
@@ -129,7 +134,7 @@ ggplot(daggHeat, aes(x = Range,
 # As we can see scenario one seems to be a lot faster that the other scenarios. To illustrate this further we plot the walking speed for each scenario
 
 # AvgSpeed per senario
-ggplot(daggByScen, aes(x = Scenario, 
+ggplot(daggByScenPart, aes(x = Scenario, 
                        y = avgSpeed, 
                        color = FOD, 
                        group = c(Scenario))) +
@@ -141,7 +146,7 @@ ggplot(daggByScen, aes(x = Scenario,
 
 # If we try to remove scenario one and then test for normality we see that it is closer, but still not quite there. However, it is so close that for the rest of the analysis we will assume Guassian distribution, even when including scenario one. 
 
-daggNoScen1 <- daggByScen %>%
+daggNoScen1 <- daggByScenPart %>%
   filter(Scenario != 1)
 
 shapiro.test(daggNoScen1$avgSpeed)
@@ -155,7 +160,7 @@ qqPlot(daggNoScen1$avgSpeed)
 # If we plot the total training time on the x-axis and then the walking speed on the y-axis for each condition what we see is that the user walks faster the more experiences he gets. 
 
 # Setting up a dataset for avg. speed for each day. 
-daggByDFR <- daggByScen %>%
+daggByDFR <- daggByScenPart %>%
   group_by(Range, day, FOD) %>%
   summarize(totalTimeTraining = max(totalTimeTraining),
             newAvgSpeed = mean(avgSpeed),
@@ -168,7 +173,7 @@ daggByDFR <- daggByScen %>%
     upperci = upper_ci(smean, se, count))
 
 # Plot over the avgSpeed over each condition and the three days.
-ggplot(daggByScen,aes(x = totalTimeTraining, 
+ggplot(daggByScenPart,aes(x = totalTimeTraining, 
                       y = avgSpeed, 
                       color = factor(Range)))+
   geom_point()+
@@ -198,7 +203,7 @@ ggplot(daggByDFR, aes(x = totalTimeTraining,
   theme_bw()
 
 # Plot over avg.Speed for each range and each FOD
-ggplot(daggByScen,aes(x = totalTimeTraining,
+ggplot(daggByScenPart,aes(x = totalTimeTraining,
                       y = avgSpeed,
                       color = factor(Range))) +
   geom_point(aes(alpha=.1)) + 
@@ -229,15 +234,15 @@ ggplot(daggByDFR, aes(x = totalTimeTraining,
 
 # In fact, the training time is a significant predictor of walking speed.
 
-summary(lm(avgSpeed ~ totalTimeTrainingHrs, data=daggByScen))
+summary(lm(avgSpeed ~ totalTimeTrainingHrs, data=daggByScenPart))
 
-### Range
+### Range #############################
 
 # As we can see on training time there seems to be a clear different between the different ranges and how they effect walking speed. 
 # 
 # Based on the plots of there seems to be a clear difference between corridor and wholeroom.
 
-daggSpeed <- daggByScen %>%
+daggSpeed <- daggByScenPart %>%
   group_by(Range, FOD) %>%
   summarize(newAvgSpeed=mean(avgSpeed),
             smean = mean(avgSpeed, na.rm = TRUE),
@@ -248,7 +253,7 @@ daggSpeed <- daggByScen %>%
     lowerci = lower_ci(smean, se, count),
     upperci = upper_ci(smean, se, count))
 
-ggplot(daggByScen,aes(x = Range, 
+ggplot(daggByScenPart,aes(x = Range, 
                       y = avgSpeed, 
                       group = FOD,
                       color = factor(FOD))) +
@@ -293,13 +298,13 @@ ggplot(data = daggSpeed, aes(x = Range,
 
 # However, when we try to predict the users walking speed based on range on all the data we do not find the range to be a significat predictor.
 
-summary(lm(avgSpeed ~ Range + totalTimeTrainingHrs, data=daggByScen))
+summary(lm(avgSpeed ~ Range, data=daggByScenPart))
 
 # Thus, we split the data up looking at the different conditions individual. What we find is that range is a significant predictor for wholeroom, but not for corridor. 
 
-WCDat <- daggByScen[daggByScen$FOD=="Baseline",]
-wrDat <- daggByScen[daggByScen$FOD=="WholeRoom",]
-corrDat <- daggByScen[daggByScen$FOD=="Corridor",]
+WCDat <- daggByScenPart[daggByScenPart$FOD=="Baseline",]
+wrDat <- daggByScenPart[daggByScenPart$FOD=="WholeRoom",]
+corrDat <- daggByScenPart[daggByScenPart$FOD=="Corridor",]
 
 summary(lm(avgSpeed ~ Range + totalTimeTrainingHrs, data=wrDat))
 
@@ -309,21 +314,21 @@ summary(lm(avgSpeed ~ Range + totalTimeTrainingHrs, data=corrDat))
 
 #Based on the figure in the previous section it seems that the FOD influences the walking speed of the user. What we find is that wholeroom does negatively predict walking speed, while corridor only show a positively tendency to effect walking speed. 
 
-summary(lm(avgSpeed ~ FOD + totalTimeTrainingHrs, data=daggByScen))
+summary(lm(avgSpeed ~ FOD + totalTimeTrainingHrs, data=daggByScenPart))
 
 ### Collisions effect on walking speed ############################# 
 
 #Logically colliding with an object should slow down the person walking. Based on the two plots it looks like that is the case as the more collisions the slower the person walk.  
 
 #Number of Collisions effect on avgSpeed
-ggplot(daggByScen,aes(y = avgSpeed, x = objectCollisions, color = factor(Range)))+
+ggplot(daggByScenPart,aes(y = avgSpeed, x = objectCollisions, color = factor(Range)))+
   geom_jitter(aes(alpha=.1))+
   #geom_smooth(size=0)+ 
   stat_smooth(aes(color="red"),method = 'nls', formula = 'y~a+x*b', method.args = list(start= c(a = 1,b=1)),se=FALSE) +
   theme_bw()
 
 #Number of Collisions effect on avgSpeed split per FOD
-ggplot(daggByScen,aes(y = avgSpeed, x = objectCollisions, color = factor(Range)))+
+ggplot(daggByScenPart,aes(y = avgSpeed, x = objectCollisions, color = factor(Range)))+
   geom_jitter(aes(alpha=.1))+
   #geom_smooth(size=0)+
   stat_smooth(method = 'nls', formula = 'y~a+x*b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
@@ -332,7 +337,7 @@ ggplot(daggByScen,aes(y = avgSpeed, x = objectCollisions, color = factor(Range))
 
 # To test this we analyzed how collisions effected the whole data set and what we found was that collisions was a significant negative predictor of walking speed
 
-summary(lm(avgSpeed ~ objectCollisions+totalTimeTrainingHrs,data=daggByScen))
+summary(lm(avgSpeed ~ objectCollisions+totalTimeTrainingHrs,data=daggByScenPart))
 
 
 # To make sure it was the same case for the individual conditions we checked of each of them and found that in all cases the number of collisions was a significant predictor of walking speed. 
@@ -346,7 +351,7 @@ summary(lm(avgSpeed ~ objectCollisions+totalTimeTrainingHrs,data=wrDat))
 #  we would expect based on collisions so does more of detections lower the walking speed of the user. 
 
 #Number of detections effect on avgSpeed 
-ggplot(daggByScen,aes(y = avgSpeed, x = objectDetected, color = factor(Range)))+
+ggplot(daggByScenPart,aes(y = avgSpeed, x = objectDetected, color = factor(Range)))+
   geom_point()+ 
   geom_jitter()+
   #geom_smooth(size=0)+ 
@@ -354,7 +359,7 @@ ggplot(daggByScen,aes(y = avgSpeed, x = objectDetected, color = factor(Range)))+
   theme_bw()
 
 #Number of detections effect on avgSpeed split per FOD
-ggplot(daggByScen,aes(y = avgSpeed, x = objectDetected, color = factor(Range)))+
+ggplot(daggByScenPart,aes(y = avgSpeed, x = objectDetected, color = factor(Range)))+
   geom_point(aes(alpha=.1))+
   geom_jitter()+
   #geom_smooth(size=0)+
@@ -364,7 +369,7 @@ ggplot(daggByScen,aes(y = avgSpeed, x = objectDetected, color = factor(Range)))+
 
 # To test if this was a significant negative predictor of walking speed of the whole data set we found that it was.
 
-summary(lm(avgSpeed ~ objectDetected + totalTimeTrainingHrs, data = daggByScen))
+summary(lm(avgSpeed ~ objectDetected + totalTimeTrainingHrs, data = daggByScenPart))
 
 # The same was also the case for the individual conditions where detections was a significant predictor of walking speed. 
 
@@ -378,19 +383,29 @@ summary(lm(avgSpeed ~ objectDetected + totalTimeTrainingHrs, data = wrDat))
 ### Detections and collisions effect on Walking speed ############################# 
 
 #Number of detections and collisions based on avgSpeed split by FOD
-ggplot(daggByScen,aes(y = avgSpeed, x = objectCollisions, colour = factor(FOD)))+
+ggplot(daggByScenPart,aes(y = objectDetected, x = objectCollisions, color = factor(Range)))+
+  geom_point(aes(alpha=.1))+
+  geom_jitter()+
+  #geom_smooth(size=0)+
+  stat_smooth(method = 'nls', formula = 'y~a+x*b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
+  theme_bw()+
+  facet_grid(cols=vars(FOD))
+
+
+
+ggplot(daggByScenPart,aes(y = avgSpeed, x = objectCollisions, colour = factor(FOD)))+
   geom_point()+
   geom_jitter()+
   #geom_smooth(size=0, color = "blue")+ 
   stat_smooth(color="red",method = 'nls', formula = 'y~a+x*b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
   geom_point(aes(x = objectDetected, colour = factor(FOD)))+
   #geom_smooth(aes(x = avgSpeed, y = objectDetected))+
-  stat_smooth(aes(x = objectDetected), color="red",method = 'nls', formula = 'y~a+x*b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
+  stat_smooth(aes(x = objectDetected), colour = Range, method = 'nls', formula = 'y~a+x*b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
   facet_grid(cols=vars(Range))
 
 
 #Number of detections and collisions based on avgSpeed split by Range
-ggplot(daggByScen,aes(y = avgSpeed, x = objectCollisions, colour = factor(Range)))+
+ggplot(daggByScenPart,aes(y = avgSpeed, x = objectCollisions, colour = factor(Range)))+
   geom_point()+
   geom_jitter()+
   #geom_smooth(size=0, color = "blue")+ 
@@ -426,7 +441,7 @@ ggplot(daggHeat, aes(x = Range, y = Scenario)) +
   labs(fill="Collisions") +
   facet_grid(cols=vars(FOD), row=vars(day))
 
-daggColl <- daggByScen %>%
+daggColl <- daggByScenPart %>%
   group_by(Range, FOD)%>%
   summarise(avgColl=mean(objectCollisions),
             smean = mean(objectCollisions, na.rm = TRUE),
@@ -438,32 +453,33 @@ daggColl <- daggByScen %>%
     upperci = upper_ci(smean, se, count))
 
 ggplot(data = daggColl, aes(x = Range, 
-                            y = avgColl, 
-                            group = FOD, 
-                            color = FOD)) +
+                             y = avgColl, 
+                             group = FOD, 
+                             color = FOD))+
   geom_point(position = position_dodge(0.1), 
-             alpha = 1) +
+             alpha=1)+
   geom_line(position = position_dodge(0.1), 
-            alpha = 1, 
-            size = 1) +
+            alpha=1, size=1)+
   #geom_bar(position="dodge", stat = "identity", size=.3)+
   geom_errorbar(aes(ymin = lowerci, 
                     ymax = upperci), 
                 width = 0.2, 
                 color = "Black", 
                 position = position_dodge(0.1)) +
-  geom_text(aes(label = round(avgColl, 1)), 
+  geom_text(aes(label = round(avgColl, 2)), 
             size = 6, 
-            alpha = 1, 
-            position = position_dodge(0.4), 
+            alpha=1, 
+            position = position_dodge(0.6), 
             vjust = -0.5) +
-  scale_color_manual(labels=c("White Cane", 
-                              "Body-preview aEMA", 
-                              "Regular aEMA")) +
+  scale_fill_hue(name="Condition", 
+                 labels=c("White Cane", 
+                          "Body-preview aEMA", 
+                          "Normal aEMA"))+
   ggtitle("Number of Objects Collisions per Range and Condition")+
   ylab("Mean Number of Collisions") +
   scale_y_continuous()+
   theme_bw()
+
 
 ## Detections =================================
 
@@ -493,7 +509,7 @@ ggplot(daggHeat, aes(x = Range, y = Scenario)) +
 
 
 #Make functions
-daggDetect <- daggByScen %>%
+daggDetect <- daggByScenPart %>%
   group_by(Range, FOD)%>%
   summarise(avgObjDet=mean(objectDetected),
             smean = mean(objectDetected, na.rm = TRUE),
@@ -504,21 +520,40 @@ daggDetect <- daggByScen %>%
     lowerci = lower_ci(smean, se, count),
     upperci = upper_ci(smean, se, count))
 
-ggplot(data = daggDetect, aes(x=Range, y=avgObjDet, group=FOD, color=FOD))+
-  geom_point(position = position_dodge(0.1), alpha=1)+
-  geom_line(position = position_dodge(0.1), alpha=1, size=1)+
+
+ggplot(data = daggDetect, aes(x = Range, 
+                            y = avgObjDet, 
+                            group = FOD, 
+                            color = FOD))+
+  geom_point(position = position_dodge(0.1), 
+             alpha=1)+
+  geom_line(position = position_dodge(0.1), 
+            alpha=1, size=1)+
   #geom_bar(position="dodge", stat = "identity", size=.3)+
-  geom_errorbar(aes(ymin = lowerci, ymax = upperci), width = 0.2, color = "Black", position = position_dodge(0.1)) +
-  geom_text(aes(label = round(avgObjDet, 1)), size = 6, alpha=1, position = position_dodge(0.45), vjust = -0.5) +
-  scale_fill_hue(name="Condition", labels=c("White Cane", "Body-preview aEMA", "Normal aEMA"))+
+  geom_errorbar(aes(ymin = lowerci, 
+                    ymax = upperci), 
+                width = 0.2, 
+                color = "Black", 
+                position = position_dodge(0.1)) +
+  geom_text(aes(label = round(avgObjDet, 2)), 
+            size = 6, 
+            alpha=1, 
+            position = position_dodge(0.6), 
+            vjust = -0.5) +
+  scale_fill_hue(name="Condition", 
+                 labels=c("White Cane", 
+                          "Body-preview aEMA", 
+                          "Normal aEMA"))+
   ggtitle("Number of Objects Detected per Range and Condition")+
   ylab("Mean Obstacles Detected") +
   scale_y_continuous()+
   theme_bw()
 
-objectsTime <- daggByScen$objectDetected / daggByScen$Time
 
-ggplot(daggByScen,aes(y = avgSpeed, x = objectsTime, color=factor(Range), alpha=0.9))+
+
+objectsTime <- daggByScenPart$objectDetected / daggByScenPart$Time
+
+ggplot(daggByScenPart,aes(y = avgSpeed, x = objectsTime, color=factor(Range), alpha=0.9))+
   geom_point()+
   geom_jitter()+
   stat_smooth(method = 'nls', formula = 'y~a+x*b', method.args = list(start= c(a = 1,b=1)),se=FALSE)+
@@ -547,19 +582,19 @@ ggplot(daggByScen,aes(y = avgSpeed, x = objectsTime, color=factor(Range), alpha=
 
 
 # analysis on how detections affect speed
-onsets <- df %>% 
+onsets <- dfp %>% 
   filter(objDet == 1) %>% 
   select(ObjDetID,
          VibStartTime = RunningTime, 
          SpeedAtVibStart = rollingSpeedMedian)
 
-offsets <- df %>% 
+offsets <- dfp %>% 
   filter(objDetStop == 1) %>% 
   select(ObjDetID,
          VibStopTime = RunningTime, 
          SpeedAtVibStop = rollingSpeedMedian)
 
-dfv<-merge(df,onsets)
+dfv<-merge(dfp,onsets)
 dfv<-merge(dfv,offsets)
 
 mean(onsets$SpeedAtVibStart, trim = 0, na.rm = TRUE)
@@ -574,7 +609,7 @@ dfv$SpeedDiffFromStart <- dfv$rollingSpeedMedian-dfv$SpeedAtVibStart
 dfv$SpeedDiffFromStop <- dfv$rollingSpeedMedian-dfv$SpeedAtVibStop
 
 
-df$ObjDetChangeHlp <- lag(df$Object_detected)
+dfp$ObjDetChangeHlp <- lag(dfp$Object_detected)
 
 
 dfv %>% 
