@@ -17,6 +17,7 @@ library("car")
 #library(ggimage)
 
 library(tidyverse)
+library(broom)
 library(here)
 library(gsheet)
 library(ggforce)
@@ -31,19 +32,35 @@ library(emmeans)
 
 # GetData
 load("data_all_Participants.rda")
-
-#Data Grouped by Scenario
-daggByScenPart <- dfp %>% 
+dfp$Range <-as.numeric(dfp$Range)
+#Data Grouped by FOD, participant and range
+daggByScenario <- dfp %>% 
   filter(Person_Speed<3)%>%
-  group_by(ParticipantID, testID, Scenario, FOD, Range)%>%
-  summarize(avgSpeed = mean(Person_Speed),
-            medianSpeed = median(Person_Speed),
-            maxSpeed = max(Person_Speed),
-            minSpeed = min(Person_Speed),
-            objectDetected = sum(objDet,na.rm = TRUE),
-            objectCollisions = sum(objColl,na.rm = TRUE),
-            Time = max(Time_in_S))%>% 
-  arrange(testID)
+  select(ParticipantID, Scenario, day, FOD, Range,Person_Speed,objDet,objColl,Time_in_S)%>%
+  pivot_longer(cols = Person_Speed:Time_in_S, names_to="measure",values_to="value") %>%
+  group_by(ParticipantID, Scenario, day, FOD, Range,measure)%>% 
+  summarize(avg = mean(value),
+            median = median(value),
+            max = max(value),
+            min = min(value),
+            sum = sum(value,na.rm = TRUE)) %>% 
+  mutate_each(funs(replace(., is.na(.), 0)), avg:sum) %>%
+  pivot_longer(cols = avg:sum, names_to="ScenarioAgg",values_to="value") 
+
+
+daggByScenPart <- daggByScenario %>%
+  group_by(ParticipantID, day, FOD, Range, measure, ScenarioAgg) %>%
+  summarize(avg = mean(value), median = median(value)) %>%
+  ungroup() %>%
+  pivot_longer(cols = avg:median, names_to = "PersonAgg", values_to = "Value")
+
+PersonBaselines <- daggByScenPart %>% ungroup() %>%
+  filter(Range == 1) %>%
+  select(ParticipantID, measure:median) %>% 
+  pivot_longer(cols = avg:median, names_to="PersonAgg",values_to="Baseline")
+
+daggByPerson <- daggByScenPart %>% merge(PersonBaselines) %>% mutate(diffFromBL=Value-Baseline)
+
 
 #add Coloum with sum of total time spent 
 daggByScenPart$totalTimeTraining<-round(cumsum(daggByScenPart$Time))
@@ -161,7 +178,7 @@ qqPlot(daggNoScen1$avgSpeed)
 
 # Setting up a dataset for avg. speed for each day. 
 daggByDFR <- daggByScenPart %>%
-  group_by(Range, day, FOD) %>%
+  group_by(Range, FOD) %>%
   summarize(totalTimeTraining = max(totalTimeTraining),
             newAvgSpeed = mean(avgSpeed),
             smean = mean(avgSpeed, na.rm = TRUE),
@@ -314,7 +331,33 @@ summary(lm(avgSpeed ~ Range + totalTimeTrainingHrs, data=corrDat))
 
 #Based on the figure in the previous section it seems that the FOD influences the walking speed of the user. What we find is that wholeroom does negatively predict walking speed, while corridor only show a positively tendency to effect walking speed. 
 
-summary(lm(avgSpeed ~ FOD + totalTimeTrainingHrs, data=daggByScenPart))
+summary(lm(avgSpeed ~ FOD + Range, data=daggByScenPart[daggByScenPart$Range>1,]))
+summary(lm(objectDetected ~ FOD + Range, data=daggByScenPart[daggByScenPart$Range>1,]))
+summary(lm(objectCollisions ~ FOD + Range, data=daggByScenPart[daggByScenPart$Range>1,]))
+
+SpeedModel<-daggByPerson %>% filter(measure=="Person_Speed",PersonAgg=="avg",ScenarioAgg=="avg") %>%
+  do(data.frame(tidy(lm(diffFromBL ~ FOD, data=.))))
+SpeedModel 
+
+ObjDetModel<-daggByPerson %>% filter(measure=="objDet",PersonAgg=="avg",ScenarioAgg=="sum") %>%
+  do(data.frame(tidy(lm(diffFromBL ~ FOD + Range, data=.))))
+ObjDetModel
+
+ObjCollModel<-daggByPerson %>% filter(measure=="objColl",PersonAgg=="avg",ScenarioAgg=="sum") %>%
+  do(data.frame(tidy(lm(diffFromBL ~ FOD + Range, data=.))))
+ObjCollModel
+
+
+daggByPerson %>% filter(measure=="Person_Speed",PersonAgg=="avg",ScenarioAgg=="avg") %>%
+ggplot(aes(x=Range,y=Value,group=ParticipantID,colour=factor(ParticipantID)))+geom_line()+facet_grid(rows=vars(FOD))
+
+daggByPerson %>% filter(measure=="Person_Speed",PersonAgg=="avg",ScenarioAgg=="avg") %>%
+  ggplot(aes(x=Range,y=diffFromBL,group=ParticipantID,colour=factor(ParticipantID)))+geom_line()+facet_grid(rows=vars(FOD))
+
+daggByPerson %>% filter(measure=="Person_Speed",PersonAgg=="avg",ScenarioAgg=="avg")%>%select(Value) %>% 
+ggplot(aes(x=Value))+geom_density()
+
+daggByPerson %>% filter(measure=="Person_Speed",PersonAgg=="avg",ScenarioAgg=="avg")%>%select(Value) %>% summarise(sd=sd(Value),mean=mean(Value),min=min(Value),max=max(Value))
 
 ### Collisions effect on walking speed ############################# 
 
