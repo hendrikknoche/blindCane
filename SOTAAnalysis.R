@@ -160,6 +160,7 @@ dataSOTA %>%
   theme_bw()
 
 
+
 # Density isn't the only independent variable much more interesting is is the detection range of the EMA. Here it is difficult to say just how big of an effect the range has on walking speed as training time completely dominates the small ranges.
 
 dataSOTA %>% 

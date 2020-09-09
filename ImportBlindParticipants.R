@@ -6,83 +6,79 @@ library(zoo)
 
 options("digits.secs"=6)
 
-#Combine all data files into one data frame
-df = readbulk::read_bulk('data', sep=';', na.strings = 'none', stringsAsFactors=FALSE)
+# Combine all data files into one data frame
+dfp = readbulk::read_bulk('dataParticipants', sep=';', na.strings = 'none', stringsAsFactors=FALSE)
 
-#Make a new testID based on the file name
-df$testID<-as.numeric(gsub("[^0-9.-]", "", substr(df$File,7,10)))
+# Sort the data based on test ID
+dfp<-rename(dfp, testID = Test.ID) 
+dfp<-dfp[order(dfp$testID),]
 
-#Delete Test.ID Columns as the fist 18 are wrong
-df$Test.ID<-NULL
+# Make a total time in seconds
+# dfp$timeSinceStart<-as.double(substr(dfp$Timer,9,16))
 
+# Rearrange the columns 
+# dfp<-dfp[,c(18:21,22,1:17,22)]
 
-df<-df[order(df$testID),]
-
-#Make a total time in seconds
-#df$timeSinceStart<-as.double(substr(df$Timer,9,16))
-
-#Rearrange the columns 
-#df<-df[,c(18:21,22,1:17,22)]
-
-#Make FOD into a factor
-df$FOD<-as.factor(df$FOD)
+# Make FOD into a factor
+dfp$FOD<-as.factor(dfp$FOD)
 
 #Rename Columns
-df<-rename(df, Range = Detection_range_in_Meters) 
-df<-rename(df, day = Day_nr.) 
+dfp<-rename(dfp, Range = Detection_range_in_Meters) 
+dfp<-rename(dfp, day = Day_nr.) 
 
 #count collisions
-df$Object_collision <- gsub('null', '', df$Object_collision)
-df$objcollBefore <- c('',df[1:(nrow(df)-1),]$Object_collision)
-df$objColl <- ifelse(substr(df$Object_collision,1,1) == "B" & df$objcollBefore == '',1,0)
+dfp$Object_collision <- gsub('null', '', dfp$Object_collision)
+dfp$objcollBefore <- c('',dfp[1:(nrow(dfp)-1),]$Object_collision)
+dfp$objColl <- ifelse(substr(dfp$Object_collision,1,1) == "B" & dfp$objcollBefore == '',1,0)
 
 #count detections
-df$Object_detected<-gsub('null', '', df$Object_detected)
-df$objDetBefore<-c('',df[1:(nrow(df)-1),]$Object_detected) 
-df$objDet<-ifelse(substr(df$Object_detected,1,1) == "B" & df$objDetBefore == '',1,0)
-df$objDetStop<-ifelse(substr(df$objDetBefore,1,1) == "B" & df$Object_detected == '',1,0)
+dfp$Object_detected<-gsub('null', '', dfp$Object_detected)
+dfp$objDetBefore<-c('',dfp[1:(nrow(dfp)-1),]$Object_detected) 
+dfp$objDet<-ifelse(substr(dfp$Object_detected,1,1) == "B" & dfp$objDetBefore == '',1,0)
+dfp$objDetStop<-ifelse(substr(dfp$objDetBefore,1,1) == "B" & dfp$Object_detected == '',1,0)
 
 #Use time stamp to calculate how long a test took
-df$Time_stamp<- as.POSIXct(df$Time_stamp, format="%m/%d/%Y %H:%M:%S")
-#df<-df[order(df$Time_stamp),]
+dfp$Time_stamp<- as.POSIXct(dfp$Time_stamp, format="%m/%d/%Y %H:%M:%S")
+#dfp<-dfp[order(dfp$Time_stamp),]
 
 #This looks like it is just counting up at each row.
-#df$timeSinceExpStarted<-time(df$Time_stamp) - min(time(df$Time_stamp))
+#dfp$timeSinceExpStarted<-time(dfp$Time_stamp) - min(time(dfp$Time_stamp))
 
 #convert the timer into time in seconds
-df$Time_in_MS <- as.POSIXct(df$Timer, format="%H:%M:%OS")
-df$Time_in_MS <- second(df$Time_in_MS)
+dfp$Time_in_S <- as.POSIXct(dfp$Timer, format="%H:%M:%OS")
+dfp$Time_in_S <- second(dfp$Time_in_S)
 
 #Make a total time in seconds
-#df$timeSinceStart<-as.double(substr(df$Timer,1,16))
+#dfp$timeSinceStart<-as.double(substr(dfp$Timer,1,16))
 
 
-df$NewTimer<-lag(df$Time_in_MS,1)
-df$ScenarioBefore<-lag(df$Scenario,default=99999)
-df$ScenarioStarts<-ifelse(!(df$Scenario==df$ScenarioBefore),1,0)
-df$RunningScenarioCounter <-cumsum(df$ScenarioStarts)
+dfp$NewTimer<-lag(dfp$Time_in_S,1)
+dfp$ScenarioBefore<-lag(dfp$Scenario,default=99999)
+dfp$ScenarioStarts<-ifelse(!(dfp$Scenario==dfp$ScenarioBefore),1,0)
+dfp$RunningScenarioCounter <-cumsum(dfp$ScenarioStarts)
 
 # gsub('_', '-', data1$c)
-# df$te
+# dfp$te
 # helper$FOD<- as.factor(helper,levels = c("Baseline", "Corridor", "large")
 
 #Make data frame into a .rda file for faster running time
 
 # add consistentTimeline
 
-df$ObjDetID <- cumsum(df$objDet)
-df$RunningTime <- df$Time_in_MS
+dfp$ObjDetID <- cumsum(dfp$objDet)
+dfp$RunningTime <- dfp$Time_in_S
 
 
-#df$ObjDetChangeHlp <- lag(df$Object_detected)
+#dfp$ObjDetChangeHlp <- lag(dfp$Object_detected)
 
 
 #create a row number to keep track of things
-df$rowNum<-1:nrow(df)
+dfp$rowNum<-1:nrow(dfp)
 # create median smoothed speed column 
-df %<>% group_by(testID) %>% mutate(rollingSpeedMedian=rollmedian(x=Person_Speed,k=5,fill=NA,align = "left"))%>%ungroup()
+dfp %<>% group_by(testID) %>% mutate(rollingSpeedMedian=rollmedian(x=Person_Speed,k=5,fill=NA,align = "left"))%>%ungroup()
 
-save(df, file='data_all.rda', compress=TRUE)
+save(dfp, file='data_all_Participants.rda', compress=TRUE)
+
 
 
 
