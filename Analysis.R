@@ -21,21 +21,174 @@ load('data_all.rda')
 # analysis on how detections affect speed
 onsets <- df %>% 
   filter(objDet == 1) %>% 
-  select(ObjDetID,VibStartTime=RunningTime,SpeedAtVibStart=rollingSpeedMedian) 
+  select(ObjDetID,
+         VibStartTime = RunningTime, 
+         SpeedAtVibStart = rollingSpeedMedian)
+
+offsets <- df %>% 
+  filter(objDetStop == 1) %>% 
+  select(ObjDetID,
+         VibStopTime = RunningTime, 
+         SpeedAtVibStop = rollingSpeedMedian)
 
 dfv<-merge(df,onsets)
+dfv<-merge(dfv,offsets)
+
+mean(onsets$SpeedAtVibStart, trim = 0, na.rm = TRUE)
+mean(offsets$SpeedAtVibStop, trim = 0, na.rm = TRUE)
+
+
 dfv$TimeSinceVibStart <- dfv$RunningTime - dfv$VibStartTime
+dfv$TimeSinceVibStop <- dfv$RunningTime - dfv$VibStopTime
+
+
 dfv$SpeedDiffFromStart <- dfv$rollingSpeedMedian-dfv$SpeedAtVibStart
+dfv$SpeedDiffFromStop <- dfv$rollingSpeedMedian-dfv$SpeedAtVibStop
+
+
 df$ObjDetChangeHlp <- lag(df$Object_detected)
 
 
-dfv %>% filter(TimeSinceVibStart<4 & TimeSinceVibStart>0) %>% ggplot(aes(x=TimeSinceVibStart,y=rollingSpeedMedian))+geom_line(alpha=.04)+facet_grid(rows=vars(FOD))+theme_bw()
-dfv %>% filter(TimeSinceVibStart<4 & TimeSinceVibStart>0) %>% ggplot(aes(x=TimeSinceVibStart,y=rollingSpeedMedian))+geom_point(alpha=.1,size=.5)+facet_grid(rows=vars(FOD))+geom_smooth()+theme_bw()
-dfv %>% filter(TimeSinceVibStart<4 & TimeSinceVibStart>0) %>% ggplot(aes(x=TimeSinceVibStart,y=SpeedDiffFromStart))+geom_point(alpha=.1,size=.5)+facet_grid(rows=vars(FOD))+geom_smooth()+theme_bw()
-dfv %>% filter(TimeSinceVibStart<4 & TimeSinceVibStart>0) %>% ggplot(aes(x=TimeSinceVibStart,y=SpeedDiffFromStart,colour=FOD))+geom_smooth()+theme_bw()
-dfv %>% filter(TimeSinceVibStart<4 & TimeSinceVibStart>0) %>% ggplot(aes(x=TimeSinceVibStart,y=rollingSpeedMedian,colour=FOD))+geom_smooth()+theme_bw()+facet_grid(cols=vars(Range))
-dfv %>% filter(TimeSinceVibStart<4 & TimeSinceVibStart>0) %>% ggplot(aes(x=TimeSinceVibStart,y=rollingSpeedMedian,colour=FOD))+geom_smooth()+theme_bw()+facet_grid(cols=vars(day))
-dfv %>% filter(TimeSinceVibStart<4 & TimeSinceVibStart>0) %>% ggplot(aes(x=TimeSinceVibStart,y=rollingSpeedMedian,colour=factor(day)))+geom_smooth()+theme_bw()
+dfv %>% 
+  filter(TimeSinceVibStart < 2.5 & TimeSinceVibStart > 0) %>% 
+  ggplot(aes(x = TimeSinceVibStart,
+             y = rollingSpeedMedian))+
+  geom_line(alpha = .04)+
+  facet_grid(rows = vars(FOD))+
+  theme_bw()
+
+
+dfv %>% 
+  filter(TimeSinceVibStart < 2.5 & TimeSinceVibStart > 0) %>% 
+  ggplot(aes(x = TimeSinceVibStart,
+             y = rollingSpeedMedian)) + 
+  geom_point(alpha = .1, 
+             size = .5) + 
+  facet_grid(rows = vars(FOD)) +
+  geom_smooth() +
+  theme_bw()
+
+
+dfv %>% 
+  filter(TimeSinceVibStart < 2.5 & TimeSinceVibStart > 0) %>% 
+  ggplot(aes(x = TimeSinceVibStart,
+             y = SpeedDiffFromStart)) + 
+  geom_point(alpha = .1,
+             size = .5) + 
+  facet_grid(rows = vars(FOD)) +
+  geom_smooth() +
+  theme_bw()
+
+
+dfv %>% 
+  filter(TimeSinceVibStart < 2.5 & TimeSinceVibStart > 0) %>% 
+  ggplot(aes(x = TimeSinceVibStart,
+             y = SpeedDiffFromStart,
+             colour = FOD)) +
+  geom_smooth() + 
+  theme_bw()
+
+
+dfv %>% 
+  filter(TimeSinceVibStart < 2.5 & TimeSinceVibStart > 0) %>% 
+  ggplot(aes(x = TimeSinceVibStart,
+             y = rollingSpeedMedian,
+             colour = FOD)) + 
+  geom_smooth() + 
+  theme_bw() + 
+  facet_grid(cols = vars(Range))
+
+
+dfv %>% 
+  filter(TimeSinceVibStart < 2 & TimeSinceVibStart>0) %>% 
+  ggplot(aes(x = TimeSinceVibStart, 
+             y = rollingSpeedMedian, 
+             colour = FOD)) + 
+  geom_smooth() + 
+  theme_bw() +
+  facet_grid(cols = vars(FOD))
+
+
+dfv %>% 
+  filter(TimeSinceVibStart < 2.5 & TimeSinceVibStart > 0) %>% 
+  ggplot(aes(x = TimeSinceVibStart,
+             y = rollingSpeedMedian,
+             colour = factor(day))) + 
+  geom_smooth() + 
+  theme_bw()
+
+
+
+dfv %>% 
+  filter(TimeSinceVibStart < 2.5 & TimeSinceVibStart > 0) %>% 
+  ggplot(aes(x = TimeSinceVibStart,
+             y = rollingSpeedMedian,
+             colour = FOD)) + 
+  geom_smooth() + 
+  theme_bw() + 
+  facet_grid(rows = vars(FOD))
+
+dfv %>% 
+  filter(TimeSinceVibStop < 2.5 & TimeSinceVibStop > 0) %>% 
+  ggplot(aes(x = TimeSinceVibStop,
+             y = rollingSpeedMedian,
+             colour = FOD)) + 
+  geom_smooth() + 
+  theme_bw() + 
+  facet_grid(rows = vars(FOD))
+
+
+
+dfvbaseDat <- dfv[dfv$FOD=="Baseline",]
+dfvwrDat <- dfv[dfv$FOD=="WholeRoom",]
+dfvcorrDat <- dfv[dfv$FOD=="Corridor",]
+
+vibDuration <- median(dfv$VibStopTime - dfv$VibStartTime)
+vibDurationBase <- median(dfvbaseDat$VibStopTime - dfvbaseDat$VibStartTime)
+vibDurationWR <- median(dfvwrDat$VibStopTime - dfvwrDat$VibStartTime)
+vibDurationCorr <- median(dfvcorrDat$VibStopTime - dfvcorrDat$VibStartTime)
+
+
+dm <- data.frame("FOD" = c("Baseline", "WholeRoom", "Corridor"),
+                 "medianDuration" = c(median(dfvbaseDat$VibStopTime - dfvbaseDat$VibStartTime), 
+                              median(dfvwrDat$VibStopTime - dfvwrDat$VibStartTime), 
+                              median(dfvcorrDat$VibStopTime - dfvcorrDat$VibStartTime))
+                 )
+
+dfv %>% 
+  filter(TimeSinceVibStart < 2.5 & TimeSinceVibStart > 0) %>% 
+  ggplot(data = dfv,
+         aes(x = TimeSinceVibStart,
+             y = rollingSpeedMedian,
+             colour = FOD)) +
+  geom_smooth() + 
+  theme_bw() + 
+  facet_grid(rows = vars(FOD)) +
+  geom_rect(data = dm, 
+            mapping = aes(xmin = medianDuration, 
+                        xmax = medianDuration, 
+                        ymin = 0, 
+                        ymax = 1, 
+                        fill = FOD), 
+            color="black", 
+            alpha=0.5)
+  
+  
+  geom_point(data = dm, 
+             aes(x = median)) 
+
+
+  geom_point(aes(x = vibDurationWR,
+                 colour = "WholeRoom")) +
+  geom_point(aes(x = vibDurationCorr,
+                 colour = "Corridor"))
+
+
+
+
+
+
+
 #Data Grouped by Snario
 daggByScen <- df %>% 
   filter(Person_Speed<3)%>%
@@ -46,7 +199,7 @@ daggByScen <- df %>%
             minSpeed=min(Person_Speed),
             objectDetected=sum(objDet,na.rm = TRUE),
             objectCollisions=sum(objColl,na.rm = TRUE),
-            Time=max(Time_in_MS*1000))%>% 
+            Time=max(Time_in_MS))%>% 
   arrange(testID)
 
 #add Coloum with sum of total time spent 
@@ -60,6 +213,20 @@ daggByScen <- daggByScen%>%group_by(FOD,day)%>%mutate(timeFDtrain=round(cumsum(T
 
 #add Coloum with total time spent for a given Day
 daggByScen <- daggByScen%>%group_by(day)%>%mutate(timeDtrain=round(cumsum(Time)),totalTimeTrainingHrs=totalTimeTraining/3600)
+
+
+baseDat <- daggByScen[daggByScen$FOD=="Baseline",]
+wrDat <- daggByScen[daggByScen$FOD=="WholeRoom",]
+corrDat <- daggByScen[daggByScen$FOD=="Corridor",]
+
+
+max(cumsum(daggByScen$Time))/max(cumsum(daggByScen$objectDetected))
+max(cumsum(baseDat$Time))/max(cumsum(baseDat$objectDetected))
+max(cumsum(wrDat$Time))/max(cumsum(wrDat$objectDetected))
+max(cumsum(corrDat$Time))/max(cumsum(corrDat$objectDetected))
+
+
+
 daggByCol <- df %>% filter(Person_Speed<3)%>%group_by(testID,day,Scenario,FOD,Range,objColl)%>%summarize(avgSpeed=mean(Person_Speed),medianSpeed=median(Person_Speed),maxSpeed=max(Person_Speed),minSpeed=min(Person_Speed),objectDetected=sum(objDet,na.rm = TRUE),objectCollisions=sum(objColl,na.rm = TRUE),Time=max(Time_in_MS*1000))%>% arrange(testID)
 
 
