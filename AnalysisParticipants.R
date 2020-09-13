@@ -32,35 +32,372 @@ library(emmeans)
 
 # GetData
 load("data_all_Participants.rda")
-dfp$Range <-as.numeric(dfp$Range)
-#Data Grouped by FOD, participant and range
+
+
+
 daggByScenario <- dfp %>% 
   filter(Person_Speed<3)%>%
-  select(ParticipantID, Scenario, day, FOD, Range,Person_Speed,objDet,objColl,Time_in_S)%>%
-  pivot_longer(cols = Person_Speed:Time_in_S, names_to="measure",values_to="value") %>%
-  group_by(ParticipantID, Scenario, day, FOD, Range,measure)%>% 
+  select(ParticipantID, Scenario, FOD, Range,Person_Speed,objDet,objColl,Time_in_S)%>%
+  pivot_longer(cols = Person_Speed:Time_in_S, 
+               names_to="measure",
+               values_to="value") %>%
+  group_by(ParticipantID, Scenario, FOD, Range,measure)%>% 
   summarize(avg = mean(value),
             median = median(value),
             max = max(value),
             min = min(value),
             sum = sum(value,na.rm = TRUE)) %>% 
   mutate_each(funs(replace(., is.na(.), 0)), avg:sum) %>%
-  pivot_longer(cols = avg:sum, names_to="ScenarioAgg",values_to="value") 
-
+  pivot_longer(cols = avg:sum, 
+               names_to="ScenarioAgg",
+               values_to="value") 
 
 daggByScenPart <- daggByScenario %>%
-  group_by(ParticipantID, day, FOD, Range, measure, ScenarioAgg) %>%
-  summarize(avg = mean(value), median = median(value)) %>%
+  group_by(ParticipantID, FOD, Range, measure, ScenarioAgg) %>%
+  summarize(avg = mean(value), 
+            median = median(value)) %>%
   ungroup() %>%
-  pivot_longer(cols = avg:median, names_to = "PersonAgg", values_to = "Value")
+  pivot_longer(cols = avg:median, 
+               names_to = "PersonAgg", 
+               values_to = "Value")
 
-PersonBaselines <- daggByScenPart %>% ungroup() %>%
+PersonBaselines <- daggByScenPart %>% 
+  ungroup() %>%
   filter(Range == 1) %>%
-  select(ParticipantID, measure:median) %>% 
-  pivot_longer(cols = avg:median, names_to="PersonAgg",values_to="Baseline")
+  select(ParticipantID, 
+         measure,
+         PersonAgg,
+         ScenarioAgg,
+         Value) %>% 
+  rename(Baseline = Value)
 
-daggByPerson <- daggByScenPart %>% merge(PersonBaselines) %>% mutate(diffFromBL=Value-Baseline)
+daggByPerson <- daggByScenPart %>% 
+  merge(PersonBaselines) %>% 
+  mutate(diffFromBL = Value - Baseline)
 
+
+daggByScenPart %>% 
+  filter(measure=="Person_Speed", PersonAgg=="avg", ScenarioAgg=="avg") %>% 
+  select(Value) %>%
+  shapiro.test(Value)
+
+
+# Test significance of Walking Speed
+SpeedModel<-daggByPerson %>% 
+  filter(measure == "Person_Speed", PersonAgg == "avg", ScenarioAgg == "avg", FOD=="WholeRoom") %>%
+  do(data.frame(tidy(lm(diffFromBL ~ Range, data=.))))
+SpeedModel 
+
+# Test significance of Detections
+ObjDetModel<-daggByPerson %>% filter(measure=="objDet",PersonAgg=="avg",ScenarioAgg=="sum") %>%
+  do(data.frame(tidy(lm(diffFromBL ~ FOD , data=.))))
+ObjDetModel
+
+# Test significance of Collisions
+ObjCollModel<-daggByPerson %>% filter(measure=="objColl",PersonAgg=="avg",ScenarioAgg=="sum") %>%
+  do(data.frame(tidy(lm(diffFromBL ~ FOD + Range, data=.))))
+ObjCollModel
+
+
+daggByPerson %>% filter(measure=="Person_Speed",PersonAgg=="avg",ScenarioAgg=="avg") %>%
+  ggplot(aes(x=Range,y=Value,group=ParticipantID,colour=factor(ParticipantID)))+geom_line()+facet_grid(rows=vars(FOD))
+
+daggByPerson %>% filter(measure=="Person_Speed",PersonAgg=="avg",ScenarioAgg=="avg") %>%
+  ggplot(aes(x=Range,y=diffFromBL,group=ParticipantID,colour=factor(ParticipantID)))+geom_line()+facet_grid(rows=vars(FOD))
+
+daggByPerson %>% 
+  filter(measure == "Person_Speed", PersonAgg == "avg", ScenarioAgg == "avg") %>%
+  select(Value) %>% 
+  ggplot(aes(x = Value)) + geom_density()
+
+daggByPerson %>% 
+  filter(measure=="Person_Speed",PersonAgg=="avg",ScenarioAgg=="avg") %>%
+  select(Value) %>% 
+  summarise(sd = sd(Value), mean = mean(Value), min = min(Value), max = max(Value))
+
+
+# Make functions
+lower_ci <- function(mean, se, n, conf_level = 0.95){
+  lower_ci <- mean - qt(1 - ((1 - conf_level) / 2), n - 1) * se
+}
+upper_ci <- function(mean, se, n, conf_level = 0.95){
+  upper_ci <- mean + qt(1 - ((1 - conf_level) / 2), n - 1) * se
+}
+
+# Plot total average Walking speed ----------------
+daggAvgSpeed <- daggByPerson %>%
+  group_by(Range, FOD) %>%
+  filter(measure == "Person_Speed",
+         PersonAgg == "avg",
+         ScenarioAgg == "avg") %>%
+  select(Value) %>%
+  summarize(newAvgSpeed = mean(Value),
+            smean = mean(Value, na.rm = TRUE),
+            ssd = sd(Value, na.rm = TRUE),
+            count = n()) %>%
+  mutate(
+    se = ssd / sqrt(count),
+    lowerci = lower_ci(smean, se, count),
+    upperci = upper_ci(smean, se, count))
+
+ggplot(data = daggAvgSpeed, aes(x = Range, 
+                             y = newAvgSpeed, 
+                             group = FOD, 
+                             color = FOD))+
+  geom_point(position = position_dodge(0.1), 
+             alpha=1)+
+  geom_line(position = position_dodge(0.1), 
+            alpha=1, size=1)+
+  geom_errorbar(aes(ymin = lowerci, 
+                    ymax = upperci), 
+                width = 0.2, 
+                color = "Black", 
+                position = position_dodge(0.1)) +
+  geom_text(aes(label = round(newAvgSpeed, 2)), 
+            size = 7, 
+            alpha = 1, 
+            position = position_dodge(0.8), 
+            vjust = -0.9) +
+  scale_fill_hue(name="Condition", 
+                 labels=c("White Cane", 
+                          "Body-preview aEMA", 
+                          "Open Range aEMA"))+
+  ggtitle("Walking Speed per Range and Condition")+
+  ylab("Mean walking speed in meters per Second") +
+  scale_y_continuous()+
+  theme_bw()
+
+# Plot Diff in Walking speed ----------------
+daggPersonSpeed <- daggByPerson %>%
+  group_by(Range, FOD) %>%
+  filter(measure == "Person_Speed",
+         PersonAgg == "avg",
+         ScenarioAgg == "avg") %>%
+  select(diffFromBL) %>%
+  summarize(newDiffSpeed = mean(diffFromBL),
+            smean = mean(diffFromBL, na.rm = TRUE),
+            ssd = sd(diffFromBL, na.rm = TRUE),
+            count = n()) %>%
+  mutate(
+    se = ssd / sqrt(count),
+    lowerci = lower_ci(smean, se, count),
+    upperci = upper_ci(smean, se, count))
+
+ggplot(data = daggPersonSpeed, aes(x = Range, 
+                             y = newDiffSpeed, 
+                             group = FOD, 
+                             color = FOD))+
+  geom_point(position = position_dodge(0.1), 
+             alpha=1)+
+  geom_line(position = position_dodge(0.1), 
+            alpha=1, size=1)+
+  geom_errorbar(aes(ymin = lowerci, 
+                    ymax = upperci), 
+                width = 0.2, 
+                color = "Black", 
+                position = position_dodge(0.1)) +
+  geom_text(aes(label = round(newDiffSpeed, 2)), 
+            size = 7, 
+            alpha = 1, 
+            position = position_dodge(0.8), 
+            vjust = -0.9) +
+  scale_fill_hue(name="Condition", 
+                 labels=c("White Cane", 
+                          "Body-preview aEMA", 
+                          "Open Range aEMA"))+
+  ggtitle("Walking Speed per Range and Condition")+
+  ylab("Mean walking speed in meters per Second") +
+  scale_y_continuous()+
+  theme_bw()
+
+# Plot total average collisions ----------------
+daggAvgColl <- daggByPerson %>%
+  group_by(Range, FOD) %>%
+  filter(measure == "objColl",
+         PersonAgg == "avg",
+         ScenarioAgg == "sum") %>%
+  select(Value) %>%
+  summarize(newAvgColl = mean(Value),
+            smean = mean(Value, na.rm = TRUE),
+            ssd = sd(Value, na.rm = TRUE),
+            count = n()) %>%
+  mutate(
+    se = ssd / sqrt(count),
+    lowerci = lower_ci(smean, se, count),
+    upperci = upper_ci(smean, se, count))
+
+ggplot(data = daggAvgColl, aes(x = Range, 
+                             y = newAvgColl, 
+                             group = FOD, 
+                             color = FOD))+
+  geom_point(position = position_dodge(0.1), 
+             alpha=1)+
+  geom_line(position = position_dodge(0.1), 
+            alpha=1, size=1)+
+  geom_errorbar(aes(ymin = lowerci, 
+                    ymax = upperci), 
+                width = 0.2, 
+                color = "Black", 
+                position = position_dodge(0.1)) +
+  geom_text(aes(label = round(newAvgColl, 2)), 
+            size = 6, 
+            alpha=1, 
+            position = position_dodge(0.6), 
+            vjust = -0.5) +
+  scale_fill_hue(name="Condition", 
+                 labels=c("White Cane", 
+                          "Body-preview aEMA", 
+                          "Normal aEMA"))+
+  ggtitle("Number of collisions per Range and Condition")+
+  ylab("Number of collisions") +
+  scale_y_continuous()+
+  theme_bw()
+
+# Plot difference in average collisions ----------------
+
+daggDiffColl <- daggByPerson %>%
+  group_by(Range, FOD) %>%
+  filter(measure == "objColl",
+         PersonAgg == "avg",
+         ScenarioAgg == "sum") %>%
+  select(diffFromBL) %>%
+  summarize(newAvgColl = mean(diffFromBL),
+            smean = mean(diffFromBL, na.rm = TRUE),
+            ssd = sd(diffFromBL, na.rm = TRUE),
+            count = n()) %>%
+  mutate(
+    se = ssd / sqrt(count),
+    lowerci = lower_ci(smean, se, count),
+    upperci = upper_ci(smean, se, count))
+
+ggplot(data = daggDiffColl, aes(x = Range, 
+                            y = newAvgColl, 
+                            group = FOD, 
+                            color = FOD))+
+  geom_point(position = position_dodge(0.1), 
+             alpha=1)+
+  geom_line(position = position_dodge(0.1), 
+            alpha=1, size=1)+
+  geom_errorbar(aes(ymin = lowerci, 
+                    ymax = upperci), 
+                width = 0.2, 
+                color = "Black", 
+                position = position_dodge(0.1)) +
+  geom_text(aes(label = round(newAvgColl, 2)), 
+            size = 6, 
+            alpha=1, 
+            position = position_dodge(0.6), 
+            vjust = -0.5) +
+  scale_fill_hue(name="Condition", 
+                 labels=c("White Cane", 
+                          "Body-preview aEMA", 
+                          "Normal aEMA"))+
+  ggtitle("Number of collisions per Range and Condition")+
+  ylab("Number of collisions") +
+  scale_y_continuous()+
+  theme_bw()
+
+# Plot total average detections ----------------
+daggAvgDet <- daggByPerson %>%
+  group_by(Range, FOD) %>%
+  filter(measure == "objDet",
+         PersonAgg == "avg",
+         ScenarioAgg == "sum") %>%
+  select(Value) %>%
+  summarize(newAvgDet = mean(Value),
+            smean = mean(Value, na.rm = TRUE),
+            ssd = sd(Value, na.rm = TRUE),
+            count = n()) %>%
+  mutate(
+    se = ssd / sqrt(count),
+    lowerci = lower_ci(smean, se, count),
+    upperci = upper_ci(smean, se, count))
+
+ggplot(data = daggAvgDet, aes(x = Range, 
+                            y = newAvgDet, 
+                            group = FOD, 
+                            color = FOD))+
+  geom_point(position = position_dodge(0.1), 
+             alpha=1)+
+  geom_line(position = position_dodge(0.1), 
+            alpha=1, size=1)+
+  geom_errorbar(aes(ymin = lowerci, 
+                    ymax = upperci), 
+                width = 0.2, 
+                color = "Black", 
+                position = position_dodge(0.1)) +
+  geom_text(aes(label = round(newAvgDet, 2)), 
+            size = 6, 
+            alpha=1, 
+            position = position_dodge(0.6), 
+            vjust = -0.5) +
+  scale_fill_hue(name="Condition", 
+                 labels=c("White Cane", 
+                          "Body-preview aEMA", 
+                          "Normal aEMA"))+
+  ggtitle("Number of Detections per Range and Condition")+
+  ylab("Number of Detections") +
+  scale_y_continuous()+
+  theme_bw()
+
+# Plot difference in average collisions ----------------
+
+daggDiffDet <- daggByPerson %>%
+  group_by(Range, FOD) %>%
+  filter(measure == "objDet",
+         PersonAgg == "avg",
+         ScenarioAgg == "sum") %>%
+  select(diffFromBL) %>%
+  summarize(newAvgDet = mean(diffFromBL),
+            smean = mean(diffFromBL, na.rm = TRUE),
+            ssd = sd(diffFromBL, na.rm = TRUE),
+            count = n()) %>%
+  mutate(
+    se = ssd / sqrt(count),
+    lowerci = lower_ci(smean, se, count),
+    upperci = upper_ci(smean, se, count))
+
+ggplot(data = daggDiffDet, aes(x = Range, 
+                           y = newAvgDet, 
+                           group = FOD, 
+                           color = FOD))+
+  geom_point(position = position_dodge(0.1), 
+             alpha=1)+
+  geom_line(position = position_dodge(0.1), 
+            alpha=1, size=1)+
+  geom_errorbar(aes(ymin = lowerci, 
+                    ymax = upperci), 
+                width = 0.2, 
+                color = "Black", 
+                position = position_dodge(0.1)) +
+  geom_text(aes(label = round(newAvgDet, 2)), 
+            size = 6, 
+            alpha=1, 
+            position = position_dodge(0.6), 
+            vjust = -0.5) +
+  scale_fill_hue(name="Condition", 
+                 labels=c("White Cane", 
+                          "Body-preview aEMA", 
+                          "Normal aEMA"))+
+  ggtitle("Number of Detections per Range and Condition")+
+  ylab("Number of Detections") +
+  scale_y_continuous()+
+  theme_bw()
+
+
+# Old code -------------------------------
+
+daggByScen <- dfp %>% 
+  filter(Person_Speed<3)%>%
+  group_by(testID, day, Scenario, FOD, Range)%>%
+  summarize(avgSpeed = mean(Person_Speed),
+            medianSpeed = median(Person_Speed),
+            maxSpeed = max(Person_Speed),
+            minSpeed = min(Person_Speed),
+            objectDetected = sum(objDet,na.rm = TRUE),
+            objectCollisions = sum(objColl,na.rm = TRUE),
+            Time = max(Time_in_S))%>% 
+  arrange(testID)
 
 #add Coloum with sum of total time spent 
 daggByScenPart$totalTimeTraining<-round(cumsum(daggByScenPart$Time))
@@ -74,13 +411,7 @@ daggByScenPart <- daggByScenPart%>%group_by(FOD,day)%>%mutate(timeFDtrain=round(
 #add Coloum with total time spent for a given Day
 daggByScenPart <- daggByScenPart%>%group_by(day)%>%mutate(timeDtrain=round(cumsum(Time)),totalTimeTrainingHrs=totalTimeTraining/3600)
 
-# Make functions
-lower_ci <- function(mean, se, n, conf_level = 0.95){
-  lower_ci <- mean - qt(1 - ((1 - conf_level) / 2), n - 1) * se
-}
-upper_ci <- function(mean, se, n, conf_level = 0.95){
-  upper_ci <- mean + qt(1 - ((1 - conf_level) / 2), n - 1) * se
-}
+
 
 # Below, a summary of our data. In total, 420 tests were completed over three days (140 per day), using three different Field Of Detections (FOD - Baseline, WholeRoom and Corridor). The WholeRoom and Corridor differ between three ranges (two, three and four meters), while the Baseline represents the original white cane (one meter range). Scenarios describe the obstacle courses the system was tested on (20 different scenarios). In addition, each test logged the walking speed of the participant, the amount of objects detected by the cane/EMA, the amount of collisions by the user and the completion time of the individual obstacle courses.
 
@@ -105,7 +436,7 @@ ggplot(daggByScenPart, aes(x = avgSpeed)) +
 
 # As we can see the data is close to by not quite normally distributed, a Shapiro Wilks test confirms this as the p-values show a significant difference and, thereby rejects the nullhypothesis of the data following a normal distributed.
 
-shapiro.test(daggByScenPart$avgSpeed)
+shapiro.test(daggByScen$objectCollisions)
 
 # A qq-plots also shows that the date is close to normal distributed with only a few outliers that was a lot faster than the rest.
 
@@ -331,33 +662,6 @@ summary(lm(avgSpeed ~ Range + totalTimeTrainingHrs, data=corrDat))
 
 #Based on the figure in the previous section it seems that the FOD influences the walking speed of the user. What we find is that wholeroom does negatively predict walking speed, while corridor only show a positively tendency to effect walking speed. 
 
-summary(lm(avgSpeed ~ FOD + Range, data=daggByScenPart[daggByScenPart$Range>1,]))
-summary(lm(objectDetected ~ FOD + Range, data=daggByScenPart[daggByScenPart$Range>1,]))
-summary(lm(objectCollisions ~ FOD + Range, data=daggByScenPart[daggByScenPart$Range>1,]))
-
-SpeedModel<-daggByPerson %>% filter(measure=="Person_Speed",PersonAgg=="avg",ScenarioAgg=="avg") %>%
-  do(data.frame(tidy(lm(diffFromBL ~ FOD, data=.))))
-SpeedModel 
-
-ObjDetModel<-daggByPerson %>% filter(measure=="objDet",PersonAgg=="avg",ScenarioAgg=="sum") %>%
-  do(data.frame(tidy(lm(diffFromBL ~ FOD + Range, data=.))))
-ObjDetModel
-
-ObjCollModel<-daggByPerson %>% filter(measure=="objColl",PersonAgg=="avg",ScenarioAgg=="sum") %>%
-  do(data.frame(tidy(lm(diffFromBL ~ FOD + Range, data=.))))
-ObjCollModel
-
-
-daggByPerson %>% filter(measure=="Person_Speed",PersonAgg=="avg",ScenarioAgg=="avg") %>%
-ggplot(aes(x=Range,y=Value,group=ParticipantID,colour=factor(ParticipantID)))+geom_line()+facet_grid(rows=vars(FOD))
-
-daggByPerson %>% filter(measure=="Person_Speed",PersonAgg=="avg",ScenarioAgg=="avg") %>%
-  ggplot(aes(x=Range,y=diffFromBL,group=ParticipantID,colour=factor(ParticipantID)))+geom_line()+facet_grid(rows=vars(FOD))
-
-daggByPerson %>% filter(measure=="Person_Speed",PersonAgg=="avg",ScenarioAgg=="avg")%>%select(Value) %>% 
-ggplot(aes(x=Value))+geom_density()
-
-daggByPerson %>% filter(measure=="Person_Speed",PersonAgg=="avg",ScenarioAgg=="avg")%>%select(Value) %>% summarise(sd=sd(Value),mean=mean(Value),min=min(Value),max=max(Value))
 
 ### Collisions effect on walking speed ############################# 
 

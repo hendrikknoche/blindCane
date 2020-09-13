@@ -79,6 +79,7 @@ dfp$rowNum<-1:nrow(dfp)
 dfp %<>% group_by(testID) %>% mutate(rollingSpeedMedian=rollmedian(x=Person_Speed,k=5,fill=NA,align = "left"))%>%ungroup()
 
 dfp$Range[dfp$Range == "0.7"] <- "1"
+dfp$Range <-as.numeric(dfp$Range)
 
 
 dfp$ParticipantID <-ifelse(dfp$testID > 420 & dfp$testID < 446, 2, dfp$ParticipantID)  

@@ -175,12 +175,32 @@ dataSOTA %>%
   #                      label = augType), 
   #                  size = 1) +
   geom_jitter(aes(alpha = .1)) +
+  geom_smooth(aes(group = 1),
+              #formula = value ~ TrainingTimeHours*Range,
+              method = 'lm', 
+  ) +
+  ylab("Avg. Walking Speed") +
+  theme_bw()
+
+dataSOTA %>% 
+  filter(aggMeasure == "avg", augType == "a") %>%
+  ggplot(aes(x = Range, 
+             y = value, 
+             color = factor(augType), 
+             group = factor(augType), 
+             size = factor(TrainingTimeHours))) +
+  #geom_mark_ellipse(aes(group = factor(augType), 
+  #                      fill = augType, 
+  #                      label = augType), 
+  #                  size = 1) +
+  geom_point(aes(alpha = .1)) +
   geom_smooth(aes(group = "n"),
               #formula = value ~ TrainingTimeHours*Range,
               method = 'lm', 
   ) +
   ylab("Avg. Walking Speed") +
   theme_bw()
+
 
 dataSOTA %>% 
   filter(aggMeasure == "avg") %>%
