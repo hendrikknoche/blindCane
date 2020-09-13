@@ -84,9 +84,27 @@ daggByScenPart %>%
 
 # Test significance of Walking Speed
 SpeedModel<-daggByPerson %>% 
-  filter(measure == "Person_Speed", PersonAgg == "avg", ScenarioAgg == "avg", FOD=="WholeRoom") %>%
-  do(data.frame(tidy(lm(diffFromBL ~ Range, data=.))))
+  filter(measure == "Person_Speed", PersonAgg == "avg", ScenarioAgg == "avg") %>%
+  do(data.frame(tidy(lm(diffFromBL ~ FOD, data=.))))
 SpeedModel 
+
+SpeedModelByDet<-
+  dfx<-daggByPerson %>% 
+  filter(PersonAgg == "avg") %>%
+  filter((measure=="Person_Speed"& ScenarioAgg == "avg") |  (measure=="objDet" & ScenarioAgg == "sum") | (measure=="objColl" & ScenarioAgg == "sum") ) %>%
+  select(ParticipantID,Value,diffFromBL,Range,FOD,measure) %>% 
+  pivot_wider(names_from = measure, values_from=c(Value,diffFromBL),names_glue = "{measure}_{.value}") 
+  do(data.frame(tidy(lm(Person_Speed_Value ~ objDet_Value, data=.))))
+
+  summary(lm(Person_Speed_Value ~ objDet_Value, data=dfx))
+  summary(lm(Person_Speed_Value ~ objColl_Value, data=dfx))
+  summary(lm(Person_Speed_Value ~ objDet_Value*objColl_Value, data=dfx))
+  
+  summary(lm(Person_Speed_diffFromBL ~ objDet_diffFromBL*objColl_diffFromBL, data=dfx))
+  summary(lm(Person_Speed_diffFromBL ~ objDet_diffFromBL*objColl_diffFromBL, data=dfx))
+  
+SpeedModelByDet 
+
 
 # Test significance of Detections
 ObjDetModel<-daggByPerson %>% filter(measure=="objDet",PersonAgg=="avg",ScenarioAgg=="sum") %>%
