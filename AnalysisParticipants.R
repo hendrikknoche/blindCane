@@ -8,6 +8,7 @@ library(lubridate)
 library(ggplot2)
 library(scales)
 library(magrittr)
+library(Rmisc)
 library("car")
 
 # not sure if we use these libraries
@@ -141,6 +142,53 @@ lower_ci <- function(mean, se, n, conf_level = 0.95){
 upper_ci <- function(mean, se, n, conf_level = 0.95){
   upper_ci <- mean + qt(1 - ((1 - conf_level) / 2), n - 1) * se
 }
+
+# LMER model - linear mixed effect models ----------------
+library(lme4)
+library("ggpubr")
+
+lme1<-lmer(objColl_Value~FOD+(1|ParticipantID),dfx[dfx$Range>0,],REML=FALSE)
+lmeNull<-lmer(objColl_Value~(1|ParticipantID),dfx[dfx$Range>0,],REML=FALSE)
+anova(lme1,lmeNull)
+
+dfFOD<-dfx %>% 
+  group_by(ParticipantID, FOD) %>% 
+  summarize(avgColl=mean(objColl_Value))
+  do(data.frame(tidy(lm(avgColl ~ FOD, data=.))))
+
+dfFODbyPerson<-dfx %>% 
+    group_by(ParticipantID, FOD) %>% 
+    summarize(avgColl=mean(objColl_Value),avgWS=mean(Person_Speed_Value)) %>%ungroup()
+
+dfFODbyPerson %>% 
+  group_by(FOD) %>% 
+  summarize(medColl=median(avgColl), sdColl=sd(avgColl),avgColl=mean(avgColl)) %>% ungroup()
+ 
+dfFODbyPerson$FOD <- recode(dfFODbyPerson$FOD,Baseline="white cane", Corridor="body preview", WholeRoom="open range") 
+dfFODbyPerson$FOD<-factor(dfFODbyPerson$FOD, levels = c("white cane", "open range", "body preview"))
+ggline(dfFODbyPerson, x = "FOD", y = "avgColl", 
+       add = c("mean_se", "jitter"), 
+       order = c("white cane", "open range", "body preview"),
+       ylab = "number of collisions", xlab = "")
+
+dfFODForPlot <- summarySE(dfFODbyPerson, measurevar="avgColl", groupvars=c("FOD"))
+
+
+ggplot(dfFODForPlot, aes(x=FOD, y=avgColl)) + 
+  geom_point()+
+  geom_jitter(data=dfFODbyPerson,color="grey",width=.1) + 
+  geom_errorbar(aes(ymin=avgColl-se, ymax=avgColl+se), width=.1) +
+  theme_bw()+ylab("average number of collisions") +xlab("")
+
+summary(lm(avgColl~FOD,dfFOD))
+
+boxplot(objColl_Value ~ Range,
+        col=c("white","lightgray"),dfx)
+boxplot(avgWS ~ FOD,
+        col=c("white","lightgray"),dfFODbyPerson)
+
+summary(aov(avgWS~FOD,dfFODbyPerson))
+summary(aov(avgColl~FOD,dfFODbyPerson))
 
 # Plot total average Walking speed ----------------
 daggAvgSpeed <- daggByPerson %>%
