@@ -9,6 +9,8 @@ library(ggplot2)
 library(scales)
 library(magrittr)
 library("car")
+library(reshape2)
+
 
 # not sure if we use these libraries
 #library(ggpubr)
@@ -80,6 +82,9 @@ daggByDFR <- daggByScenTrain %>%
     lowerci = lower_ci(smean, se, count),
     upperci = upper_ci(smean, se, count))
 
+daggByDFR$FOD<-recode(daggByDFR$FOD, Baseline="White Cane", WholeRoom = "Open Range A-ema", Corridor = "Body Preview A-ema")
+daggByDFR$FOD<-factor(daggByDFR$FOD, levels=c("White Cane", "Open Range A-ema", "Body Preview A-ema"))
+
 ggplot(daggByDFR, aes(x = totalTimeTraining,
                       y = newAvgSpeed,
                       color = factor(Range),
@@ -93,11 +98,20 @@ ggplot(daggByDFR, aes(x = totalTimeTraining,
                                            b = 1)),
               se = FALSE)+
   theme_bw()+
-  facet_grid(cols = vars(FOD))
+  facet_grid(cols = vars(FOD), labeller=labeller(daggByDFR$FOD)) +
+  theme(legend.position="bottom", 
+        panel.spacing = unit(2, "lines"), 
+        axis.text.x = element_text(size = 12), 
+        axis.text.y = element_text(size = 12), 
+        axis.title = element_text(size=12)) + 
+        ylab("Average Walking Speed") +
+        xlab("Training Time") +
+        scale_color_discrete("Range") +
+        scale_shape_discrete("Range")
 
 
 
-# Number of Alerts
+#Number of Alerts
 daggDetectTrain <- daggByScenTrain %>%
   group_by(Range, FOD)%>%
   summarise(avgObjDet = mean(objectDetected),
@@ -109,11 +123,15 @@ daggDetectTrain <- daggByScenTrain %>%
     lowerci = lower_ci(smean, se, count),
     upperci = upper_ci(smean, se, count))
 
-ggplot(data = daggDetectTrain, aes(x = Range, 
+daggDetectTrain$FOD<-recode(daggDetectTrain$FOD, Baseline="White Cane", WholeRoom="Open Range A-ema", Corridor="Body Preview A-ema")
+daggDetectTrain$FOD<-factor(daggDetectTrain$FOD, levels=c("White Cane", "Open Range A-ema", "Body Preview A-ema"))
+
+ggplot(daggDetectTrain, aes(x = Range, 
                               y = avgObjDet, 
                               group = FOD, 
-                              color = FOD)) +
-  geom_point(position = position_dodge(0.1), alpha=1)+
+                              color = FOD,
+                              shape = FOD)) +
+  geom_point(position = position_dodge(0.1), alpha=1, size=5)+
   geom_line(position = position_dodge(0.1), 
             alpha = 1, 
             size = 1)+
@@ -122,19 +140,21 @@ ggplot(data = daggDetectTrain, aes(x = Range,
                 width = 0.2, 
                 color = "Black", 
                 position = position_dodge(0.1)) +
-  geom_text(aes(label = round(avgObjDet, 1)), 
-            size = 6, 
-            alpha=1, 
-            position = position_dodge(0.45), 
-            vjust = -0.5) +
   scale_fill_hue(name="Condition", 
                  labels=c("White Cane", 
-                          "Body-preview aEMA", 
-                          "Normal aEMA"))+
-  ggtitle("Number of Objects Detected per Range and Condition")+
+                          "Body-preview A-ema", 
+                          "Normal A-ema"))+
+  #ggtitle("Number of Objects Detected per Range and Condition")+
   ylab("Average number of Alerts") +
   scale_y_continuous()+
-  theme_bw()
+  theme_bw() + 
+  theme(legend.position="bottom", 
+        axis.text.x = element_text(size = 14), 
+        axis.text.y = element_text(size = 14), 
+        axis.title = element_text(size = 14)) +
+        scale_color_discrete("FOA") +
+        scale_shape_discrete("FOA")
+  
 
 
 # Average Walking speed
@@ -149,11 +169,15 @@ daggSpeedTrain <- daggByScenTrain %>%
     lowerci = lower_ci(smean, se, count),
     upperci = upper_ci(smean, se, count))
 
+daggSpeedTrain$FOD<-recode(daggSpeedTrain$FOD, Baseline="White Cane", WholeRoom="Open Range A-ema", Corridor="Body Preview A-ema")
+daggSpeedTrain$FOD<-factor(daggSpeedTrain$FOD, levels=c("White Cane", "Open Range A-ema", "Body Preview A-ema"))
+
 ggplot(data = daggSpeedTrain, aes(x = Range, 
                               y = newAvgSpeed, 
                               group = FOD, 
-                              color = FOD)) +
-  geom_point(position = position_dodge(0.1), alpha=1) +
+                              color = FOD,
+                              shape = FOD)) +
+  geom_point(position = position_dodge(0.1), alpha=1, size = 5) +
   geom_line(position = position_dodge(0.1), 
             alpha = 1, 
             size = 1) +
@@ -162,11 +186,6 @@ ggplot(data = daggSpeedTrain, aes(x = Range,
                 width = 0.2, 
                 color = "Black", 
                 position = position_dodge(0.1)) +
-  geom_text(aes(label = round(newAvgSpeed, 1)), 
-            size = 6, 
-            alpha=1, 
-            position = position_dodge(0.45), 
-            vjust = -0.5) +
   scale_fill_hue(name="Condition", 
                  labels=c("White Cane", 
                           "Body-preview aEMA", 
@@ -174,7 +193,13 @@ ggplot(data = daggSpeedTrain, aes(x = Range,
   ggtitle("Number of Objects Detected per Range and Condition")+
   ylab("Average Walking Speed") +
   scale_y_continuous()+
-  theme_bw()
+  theme_bw() +
+  theme(legend.position="bottom", 
+        axis.text.x = element_text(size = 14), 
+        axis.text.y = element_text(size = 14), 
+        axis.title = element_text(size = 14)) +
+        scale_color_discrete("FOA") +
+        scale_shape_discrete("FOA")
 
 
 # Number of Collisions
@@ -189,11 +214,15 @@ daggCollTrain <- daggByScenTrain %>%
     lowerci = lower_ci(smean, se, count),
     upperci = upper_ci(smean, se, count))
 
+daggCollTrain$FOD<-recode(daggCollTrain$FOD, Baseline="White Cane", WholeRoom="Open Range A-ema", Corridor="Body Preview A-ema")
+daggCollTrain$FOD<-factor(daggCollTrain$FOD, levels=c("White Cane", "Open Range A-ema", "Body Preview A-ema"))
+
 ggplot(data = daggCollTrain, aes(x = Range, 
                                   y = newObjColl, 
                                   group = FOD, 
-                                  color = FOD)) +
-  geom_point(position = position_dodge(0.1), alpha=1) +
+                                  color = FOD,
+                                  shape = FOD)) +
+  geom_point(position = position_dodge(0.1), alpha=1, size=5) +
   geom_line(position = position_dodge(0.1), 
             alpha = 1, 
             size = 1) +
@@ -202,11 +231,6 @@ ggplot(data = daggCollTrain, aes(x = Range,
                 width = 0.2, 
                 color = "Black", 
                 position = position_dodge(0.1)) +
-  geom_text(aes(label = round(newObjColl, 1)), 
-            size = 6, 
-            alpha=1, 
-            position = position_dodge(0.45), 
-            vjust = -0.5) +
   scale_fill_hue(name="Condition", 
                  labels=c("White Cane", 
                           "Body-preview aEMA", 
@@ -214,7 +238,13 @@ ggplot(data = daggCollTrain, aes(x = Range,
   ggtitle("Number of Objects Detected per Range and Condition")+
   ylab("Average Number of collisions") +
   scale_y_continuous()+
-  theme_bw()
+  theme_bw() +
+  theme(legend.position="bottom", 
+        axis.text.x = element_text(size = 14), 
+        axis.text.y = element_text(size = 14), 
+        axis.title = element_text(size = 14)) +
+        scale_color_discrete("FOA") +
+        scale_shape_discrete("FOA")
 
 
 
