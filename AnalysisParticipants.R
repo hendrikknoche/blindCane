@@ -204,14 +204,30 @@ ggline(dfFODbyPerson, x = "FOD", y = "avgColl",
        order = c("white cane", "open range", "body preview"),
        ylab = "number of collisions", xlab = "")
 
-dfFODForPlot <- summarySE(dfFODbyPerson, measurevar="avgColl", groupvars=c("FOD"))
+dfFODForPlotColl <- summarySE(dfFODbyPerson, measurevar="avgColl", groupvars=c("FOD"))
+dfFODForPlotWS <- summarySE(dfFODbyPerson, measurevar="avgWS", groupvars=c("FOD"))
+
+ggplot(dfFODForPlotColl, aes(x=FOD, y=avgColl, fill=FOD,colour=FOD,shape=FOD)) + 
+  geom_point(data=dfFODbyPerson,fill="grey",color="grey",width=.1) + 
+  geom_line(data=dfFODbyPerson,aes(group=ParticipantID),color="grey",width=.1) +
+  geom_errorbar(aes(ymin=avgColl-se, ymax=avgColl+se), color="black",width=.1) +
+  geom_point(size=4)+
+  scale_shape_manual(values=c(20, 25, 22))+
+  theme_bw()+theme(legend.position = "none",axis.text.x = element_text(size = 20),axis.text.y = element_text(size = 20),axis.title=element_text(size=22,face="bold"))+ylab("number of collisions") +xlab("")
+ggsave(here("..","..", "S1-CollisionsByFOD.png"),width=9,height = 6.3)
 
 
-ggplot(dfFODForPlot, aes(x=FOD, y=avgColl)) + 
-  geom_point()+
-  geom_jitter(data=dfFODbyPerson,color="grey",width=.1) + 
-  geom_errorbar(aes(ymin=avgColl-se, ymax=avgColl+se), width=.1) +
-  theme_bw()+ylab("average number of collisions") +xlab("")
+ggplot(dfFODForPlotWS, aes(x=FOD, y=avgWS, fill=FOD,colour=FOD,shape=FOD)) + 
+  geom_point(data=dfFODbyPerson,fill="grey",color="grey",width=.1) + 
+  geom_line(data=dfFODbyPerson,aes(group=ParticipantID),color="grey",width=.1) +
+  geom_errorbar(aes(ymin=avgWS-se, ymax=avgWS+se), color="black",width=.1) +
+  geom_point(size=4)+
+  scale_shape_manual(values=c(20, 25, 22))+
+  theme_bw()+theme(legend.position = "none",axis.text.x = element_text(size = 20),axis.text.y = element_text(size = 20),axis.title=element_text(size=22,face="bold"))+ylab("walking speed (m/s)") +xlab("")
+ggsave(here("..","..", "Study1WalkingSpeed.png"),width=9,height = 6.3)
+
+#"Dropbox" ,"Apps","Overleaf","CHI Blind Tunnel Vision Limiting the Field of Detection and Range of Electronic Mobility Aids","figures"
+set_here(path='~')
 
 summary(lm(avgColl~FOD,dfFOD))
 
@@ -1193,8 +1209,8 @@ geom_point(aes(x = vibDurationWR,
                  colour = "Corridor"))
 
 
+###### Analysis of differences consistency in terms  of collisions ######
+col4ICC<-dfx %>% select (FOD, Range, ParticipantID, colls=objColl_Value) %>% pivot_wider(names_from=ParticipantID,values_from=colls) %>% ungroup() %>% select(-FOD,-Range) 
+ psych::ICC(col4ICC)
 
-
-
-
-
+ Yes
