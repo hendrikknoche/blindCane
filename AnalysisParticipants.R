@@ -98,42 +98,75 @@ SpeedModelByDet<-
   do(data.frame(tidy(lm(Person_Speed_Value ~ objDet_Value, data=.))))
 
   summary(lm(Person_Speed_Value ~ objDet_Value, data=dfx))
+  summary(lm(objColl_Value ~ objDet_Value, data=dfx))
+  
+  summary(lm(Person_Speed_Value ~ objColl_Value, data=dfx))
+  summary(lm(Person_Speed_Value ~ objDet_Value*objColl_Value, data=dfx))
+  
+  
+  summary(lm(objDet_Value ~ Range, data=dfx))
+  
+  summary(lm(objColl_Value ~ FOD, family="poisson", data=dfx))
+  
+  
+  
   summary(lm(Person_Speed_Value ~ objColl_Value, data=dfx))
   summary(lm(Person_Speed_Value ~ objDet_Value*objColl_Value, data=dfx))
   
   summary(lm(Person_Speed_diffFromBL ~ objDet_diffFromBL*objColl_diffFromBL, data=dfx))
   summary(lm(Person_Speed_diffFromBL ~ objDet_diffFromBL*objColl_diffFromBL, data=dfx))
   
-SpeedModelByDet 
-
-
-# Test significance of Detections
-ObjDetModel<-daggByPerson %>% filter(measure=="objDet",PersonAgg=="avg",ScenarioAgg=="sum") %>%
-  do(data.frame(tidy(lm(diffFromBL ~ FOD , data=.))))
-ObjDetModel
-
-# Test significance of Collisions
-ObjCollModel<-daggByPerson %>% filter(measure=="objColl",PersonAgg=="avg",ScenarioAgg=="sum") %>%
-  do(data.frame(tidy(lm(diffFromBL ~ FOD + Range, data=.))))
-ObjCollModel
-
-
-daggByPerson %>% filter(measure=="Person_Speed",PersonAgg=="avg",ScenarioAgg=="avg") %>%
-  ggplot(aes(x=Range,y=Value,group=ParticipantID,colour=factor(ParticipantID)))+geom_line()+facet_grid(rows=vars(FOD))
-
-daggByPerson %>% filter(measure=="Person_Speed",PersonAgg=="avg",ScenarioAgg=="avg") %>%
-  ggplot(aes(x=Range,y=diffFromBL,group=ParticipantID,colour=factor(ParticipantID)))+geom_line()+facet_grid(rows=vars(FOD))
-
-daggByPerson %>% 
-  filter(measure == "Person_Speed", PersonAgg == "avg", ScenarioAgg == "avg") %>%
-  select(Value) %>% 
-  ggplot(aes(x = Value)) + geom_density()
-
-daggByPerson %>% 
-  filter(measure=="Person_Speed",PersonAgg=="avg",ScenarioAgg=="avg") %>%
-  select(Value) %>% 
-  summarise(sd = sd(Value), mean = mean(Value), min = min(Value), max = max(Value))
-
+  SpeedModelByDet 
+  
+  
+  # Test significance of Detections
+  ObjDetModel<-daggByPerson %>% filter(measure=="objDet",PersonAgg=="avg",ScenarioAgg=="sum") %>%
+    do(data.frame(tidy(lm(diffFromBL ~ Range, family="poisson", data=.))))
+  ObjDetModel
+  
+  # Test significance of Collisions
+  ObjCollModel<-daggByPerson %>% filter(measure=="objColl",PersonAgg=="avg",ScenarioAgg=="sum") %>%
+    do(data.frame(tidy(lm(diffFromBL ~ Range, family="poisson", data=.))))
+  ObjCollModel
+  
+  
+  daggByPerson %>% filter(measure=="Person_Speed",PersonAgg=="avg",ScenarioAgg=="avg") %>%
+    ggplot(aes(x=Range,y=Value,group=ParticipantID,colour=factor(ParticipantID)))+geom_line()+facet_grid(rows=vars(FOD))
+  
+  daggByPerson %>% filter(measure=="Person_Speed",PersonAgg=="avg",ScenarioAgg=="avg") %>%
+    ggplot(aes(x=Range,y=diffFromBL,group=ParticipantID,colour=factor(ParticipantID)))+geom_line()+facet_grid(rows=vars(FOD))
+  
+  daggByPerson %>% 
+    filter(measure == "Person_Speed", PersonAgg == "avg", ScenarioAgg == "avg") %>%
+    select(Value) %>% 
+    ggplot(aes(x = Value)) + geom_density()
+  
+  daggByPerson %>% 
+    filter(measure=="Person_Speed",PersonAgg=="avg",ScenarioAgg=="avg") %>%
+    filter(FOD=="Corridor") %>%
+    select(Value) %>%
+    summarise(sd = sd(Value), mean = mean(Value), min = min(Value), max = max(Value))
+  
+  options(scipen=999)
+  
+  dfxColl <- dfx  %>% group_by(ParticipantID) %>% summarise(avgColl=mean(objColl_Value)) 
+  
+  dfx  %>% summarise(sd = sd(objColl_Value), mean = mean(objColl_Value), min = min(objColl_Value), max = max(objColl_Value)) 
+  
+  
+  sd(dfxColl$avgColl)
+  
+  dfxDet <- dfx  %>% group_by(ParticipantID) %>% summarise(avgDet=mean(objDet_Value)) 
+  
+  dfx  %>% summarise(sd = sd(objDet_Value), mean = mean(objDet_Value), min = min(objDet_Value), max = max(objDet_Value)) 
+  
+  sd(dfxDet$avgDet)
+  
+  dfxSpeed <- dfx  %>% group_by(ParticipantID) %>% filter(FOD=="WholeRoom") %>% summarise(avgSpeed=mean(Person_Speed_Value)) 
+  
+  dfx  %>% filter(FOD=="WholeRoom")  %>% summarise(sd = sd(Person_Speed_Value), mean = mean(Person_Speed_Value), min = min(Person_Speed_Value), max = max(Person_Speed_Value)) 
+  
+  sd(dfxSpeed$avgSpeed)
 
 # Make functions
 lower_ci <- function(mean, se, n, conf_level = 0.95){

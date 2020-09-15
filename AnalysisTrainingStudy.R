@@ -39,7 +39,7 @@ daggByScenTrain <- dft %>%
             minSpeed = min(Person_Speed),
             objectDetected = sum(objDet,na.rm = TRUE),
             objectCollisions = sum(objColl,na.rm = TRUE),
-            Time = max(Time_in_S))%>% 
+            Time = max(Time_in_MS))%>% 
   arrange(testID)
 
 #add Coloum with sum of total time spent 
@@ -61,6 +61,170 @@ lower_ci <- function(mean, se, n, conf_level = 0.95){
 upper_ci <- function(mean, se, n, conf_level = 0.95){
   upper_ci <- mean + qt(1 - ((1 - conf_level) / 2), n - 1) * se
 }
+
+
+
+# PLOTS FOR THE PAPER!!!! MAKE PRETTY!!!
+
+
+#Training Time
+daggByDFR <- daggByScenTrain %>%
+  group_by(Range, day, FOD) %>%
+  summarize(totalTimeTraining = max(totalTimeTraining),
+            newAvgSpeed = mean(avgSpeed),
+            smean = mean(avgSpeed, na.rm = TRUE),
+            ssd = sd(avgSpeed, na.rm = TRUE),
+            count = n()) %>%
+  mutate(
+    se = ssd / sqrt(count),
+    lowerci = lower_ci(smean, se, count),
+    upperci = upper_ci(smean, se, count))
+
+ggplot(daggByDFR, aes(x = totalTimeTraining,
+                      y = newAvgSpeed,
+                      color = factor(Range),
+                      shape = factor(Range)))+
+  geom_point()+  
+  geom_errorbar(aes(ymin = lowerci, 
+                    ymax = upperci))+
+  stat_smooth(method = 'nls', 
+              formula = 'y~a*x^b', 
+              method.args = list(start = c(a = 1,
+                                           b = 1)),
+              se = FALSE)+
+  theme_bw()+
+  facet_grid(cols = vars(FOD))
+
+
+
+# Number of Alerts
+daggDetectTrain <- daggByScenTrain %>%
+  group_by(Range, FOD)%>%
+  summarise(avgObjDet = mean(objectDetected),
+            smean = mean(objectDetected, na.rm = TRUE),
+            ssd = sd(objectDetected, na.rm = TRUE),
+            count = n()) %>%
+  mutate(
+    se = ssd / sqrt(count),
+    lowerci = lower_ci(smean, se, count),
+    upperci = upper_ci(smean, se, count))
+
+ggplot(data = daggDetectTrain, aes(x = Range, 
+                              y = avgObjDet, 
+                              group = FOD, 
+                              color = FOD)) +
+  geom_point(position = position_dodge(0.1), alpha=1)+
+  geom_line(position = position_dodge(0.1), 
+            alpha = 1, 
+            size = 1)+
+  geom_errorbar(aes(ymin = lowerci, 
+                    ymax = upperci), 
+                width = 0.2, 
+                color = "Black", 
+                position = position_dodge(0.1)) +
+  geom_text(aes(label = round(avgObjDet, 1)), 
+            size = 6, 
+            alpha=1, 
+            position = position_dodge(0.45), 
+            vjust = -0.5) +
+  scale_fill_hue(name="Condition", 
+                 labels=c("White Cane", 
+                          "Body-preview aEMA", 
+                          "Normal aEMA"))+
+  ggtitle("Number of Objects Detected per Range and Condition")+
+  ylab("Average number of Alerts") +
+  scale_y_continuous()+
+  theme_bw()
+
+
+# Average Walking speed
+daggSpeedTrain <- daggByScenTrain %>%
+  group_by(Range, FOD) %>%
+  summarise(newAvgSpeed = mean(avgSpeed),
+            smean = mean(avgSpeed, na.rm = TRUE),
+            ssd = sd(avgSpeed, na.rm = TRUE),
+            count = n()) %>%
+  mutate(
+    se = ssd / sqrt(count),
+    lowerci = lower_ci(smean, se, count),
+    upperci = upper_ci(smean, se, count))
+
+ggplot(data = daggSpeedTrain, aes(x = Range, 
+                              y = newAvgSpeed, 
+                              group = FOD, 
+                              color = FOD)) +
+  geom_point(position = position_dodge(0.1), alpha=1) +
+  geom_line(position = position_dodge(0.1), 
+            alpha = 1, 
+            size = 1) +
+  geom_errorbar(aes(ymin = lowerci, 
+                    ymax = upperci), 
+                width = 0.2, 
+                color = "Black", 
+                position = position_dodge(0.1)) +
+  geom_text(aes(label = round(newAvgSpeed, 1)), 
+            size = 6, 
+            alpha=1, 
+            position = position_dodge(0.45), 
+            vjust = -0.5) +
+  scale_fill_hue(name="Condition", 
+                 labels=c("White Cane", 
+                          "Body-preview aEMA", 
+                          "Normal aEMA"))+
+  ggtitle("Number of Objects Detected per Range and Condition")+
+  ylab("Average Walking Speed") +
+  scale_y_continuous()+
+  theme_bw()
+
+
+# Number of Collisions
+daggCollTrain <- daggByScenTrain %>%
+  group_by(Range, FOD) %>%
+  summarise(newObjColl = mean(objectCollisions),
+            smean = mean(objectCollisions, na.rm = TRUE),
+            ssd = sd(objectCollisions, na.rm = TRUE),
+            count = n()) %>%
+  mutate(
+    se = ssd / sqrt(count),
+    lowerci = lower_ci(smean, se, count),
+    upperci = upper_ci(smean, se, count))
+
+ggplot(data = daggCollTrain, aes(x = Range, 
+                                  y = newObjColl, 
+                                  group = FOD, 
+                                  color = FOD)) +
+  geom_point(position = position_dodge(0.1), alpha=1) +
+  geom_line(position = position_dodge(0.1), 
+            alpha = 1, 
+            size = 1) +
+  geom_errorbar(aes(ymin = lowerci, 
+                    ymax = upperci), 
+                width = 0.2, 
+                color = "Black", 
+                position = position_dodge(0.1)) +
+  geom_text(aes(label = round(newObjColl, 1)), 
+            size = 6, 
+            alpha=1, 
+            position = position_dodge(0.45), 
+            vjust = -0.5) +
+  scale_fill_hue(name="Condition", 
+                 labels=c("White Cane", 
+                          "Body-preview aEMA", 
+                          "Normal aEMA"))+
+  ggtitle("Number of Objects Detected per Range and Condition")+
+  ylab("Average Number of collisions") +
+  scale_y_continuous()+
+  theme_bw()
+
+
+
+
+# STOP HERE THE REST IS JUS A MESS OF CODE
+
+
+
+
+
 
 # Below, a summary of our data. In total, 420 tests were completed over three days (140 per day), using three different Field Of Detections (FOD - Baseline, WholeRoom and Corridor). The WholeRoom and Corridor differ between three ranges (two, three and four meters), while the Baseline represents the original white cane (one meter range). Scenarios describe the obstacle courses the system was tested on (20 different scenarios). In addition, each test logged the walking speed of the participant, the amount of objects detected by the cane/EMA, the amount of collisions by the user and the completion time of the individual obstacle courses.
 
@@ -211,21 +375,7 @@ ggplot(daggByScenTrain,aes(x = totalTimeTraining,
   theme_bw()
 
 # Graph over avg.Speed for each range and each FOD
-ggplot(daggByDFR, aes(x = totalTimeTraining,
-                      y = newAvgSpeed,
-                      color = factor(Range),
-                      shape = factor(Range)))+
-  geom_point()+ 
-  #geom_smooth(size=0)+ 
-  geom_errorbar(aes(ymin = lowerci, 
-                    ymax = upperci))+
-  stat_smooth(method = 'nls', 
-              formula = 'y~a*x^b', 
-              method.args = list(start = c(a = 1,
-                                           b = 1)),
-              se = FALSE)+
-  theme_bw()+
-  facet_grid(cols = vars(FOD))
+
 
 # In fact, the training time is a significant predictor of walking speed.
 

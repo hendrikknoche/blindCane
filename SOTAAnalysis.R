@@ -55,7 +55,7 @@ dataSOTA <- dfSOTA %>%
   group_by(Author) %>%
   pivot_longer(
     names_sep = "_",
-    cols = c(13:33),
+    cols = c(14:33),
     names_to = c("DV", "aggMeasure", "augType","EMASupp","WCsupp"),
     values_to = "value"
   ) %>% 
@@ -159,6 +159,41 @@ dataSOTA %>%
   ylab("Avg. Walking Speed") +
   theme_bw()
 
+dataSOTA %>% 
+  filter(aggMeasure == "avg", TrainingTimeHours < 1) %>%
+  ggplot(aes(x = Density, 
+             y = value, 
+             color = factor(augType), 
+             group = factor(augType), 
+             size = factor(TrainingTimeHours))) +
+  geom_jitter(aes(alpha = .1)) +
+  #geom_mark_ellipse(aes(group = factor(augType), 
+  #                      fill = augType, 
+  #                      label = augType), 
+  #                  size=1) +
+  geom_smooth(aes(group = "1"), 
+              method = 'lm',
+              size=1) +
+  ylab("Avg. Walking Speed") +
+  theme_bw()
+
+dataSOTA %>% 
+  filter(aggMeasure == "avg", TrainingTimeHours > 1) %>%
+  ggplot(aes(x = Density, 
+             y = value, 
+             color = factor(augType), 
+             group = factor(augType), 
+             size = factor(TrainingTimeHours))) +
+  geom_jitter(aes(alpha = .1)) +
+  #geom_mark_ellipse(aes(group = factor(augType), 
+  #                      fill = augType, 
+  #                      label = augType), 
+  #                  size=1) +
+  geom_smooth(aes(group = "1"), 
+              method = 'lm',
+              size=1) +
+  ylab("Avg. Walking Speed") +
+  theme_bw()
 
 
 # Density isn't the only independent variable much more interesting is is the detection range of the EMA. Here it is difficult to say just how big of an effect the range has on walking speed as training time completely dominates the small ranges.
@@ -181,30 +216,6 @@ dataSOTA %>%
   ) +
   ylab("Avg. Walking Speed") +
   theme_bw()
-
-dataSOTA %>% 
-  filter(aggMeasure == "avg", augType == "a") %>%
-  ggplot(aes(x = Range, 
-             y = value, 
-             color = factor(augType), 
-             group = factor(augType), 
-             size = factor(TrainingTimeHours))) +
-  #geom_mark_ellipse(aes(group = factor(augType), 
-  #                      fill = augType, 
-  #                      label = augType), 
-  #                  size = 1) +
-  geom_point(aes(alpha = .1)) +
-  geom_smooth(aes(group = "n"),
-              #formula = value ~ TrainingTimeHours*Range,
-              method = 'lm', 
-  ) +
-  ylab("Avg. Walking Speed") +
-  theme_bw()
-
-
-dataSOTA %>% 
-  filter(aggMeasure == "avg") %>%
-  summary(lm(value ~ TrainingTimeHours*range, data=dataSOTA))
 
 #To see just how much range influenced walking speed not taking into account walking speed we tried to split up all studies where the participant got more than one hour of training.
 
@@ -308,7 +319,7 @@ dataSOTA %>%
              y = value, 
              color = factor(augType), 
              group = factor(augType), 
-             size = factor(TrainingTimeHours))) +
+             size = factor(Density))) +
   #geom_mark_ellipse(aes(group = factor(augType), 
   #                      fill = augType, 
   #                      label = augType), 
@@ -344,7 +355,7 @@ dataSOTA %>%
              y = value, 
              color = factor(augType), 
              group = factor(augType), 
-             size = factor(TrainingTimeHours))) +
+             size = factor(Density))) +
   #geom_mark_ellipse(aes(group = factor(augType), 
   #                      fill = augType, 
   #                      label = augType), 
