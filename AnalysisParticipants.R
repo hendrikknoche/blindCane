@@ -34,7 +34,8 @@ library(emmeans)
 # GetData
 load("data_all_Participants.rda")
 
-
+PIDTrialID<-dfp %>% select (ParticipantID,testID) %>% group_by(ParticipantID,testID) %>% summarise(number=1) %>% mutate(runningNum=cumsum(number))%>%select(-number)
+dfp<-merge(dfp,PIDTrialID)
 
 daggByScenario <- dfp %>% 
   filter(Person_Speed<3)%>%
