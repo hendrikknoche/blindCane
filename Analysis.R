@@ -49,6 +49,7 @@ dfv$SpeedDiffFromStop <- dfv$rollingSpeedMedian-dfv$SpeedAtVibStop
 df$ObjDetChangeHlp <- lag(df$Object_detected)
 
 
+#Do not run takes 200 years and is not important
 dfv %>% 
   filter(TimeSinceVibStart < 2.5 & TimeSinceVibStart > 0) %>% 
   ggplot(aes(x = TimeSinceVibStart,
@@ -57,7 +58,7 @@ dfv %>%
   facet_grid(rows = vars(FOD))+
   theme_bw()
 
-
+#Do not run takes 200 years and is not important
 dfv %>% 
   filter(TimeSinceVibStart < 2.5 & TimeSinceVibStart > 0) %>% 
   ggplot(aes(x = TimeSinceVibStart,
@@ -68,7 +69,7 @@ dfv %>%
   geom_smooth() +
   theme_bw()
 
-
+#Do not run takes 200 years and is not important
 dfv %>% 
   filter(TimeSinceVibStart < 2.5 & TimeSinceVibStart > 0) %>% 
   ggplot(aes(x = TimeSinceVibStart,
@@ -79,7 +80,7 @@ dfv %>%
   geom_smooth() +
   theme_bw()
 
-
+#Plot over the three FODs
 dfv %>% 
   filter(TimeSinceVibStart < 2.5 & TimeSinceVibStart > 0) %>% 
   ggplot(aes(x = TimeSinceVibStart,
@@ -103,18 +104,17 @@ dfv %>%
   filter(TimeSinceVibStart < 2 & TimeSinceVibStart>0) %>% 
   ggplot(aes(x = TimeSinceVibStart, 
              y = rollingSpeedMedian, 
-             colour = FOD)) + 
-  geom_smooth() + 
+             colour = factor(Range))) + 
+  geom_smooth(se=F) + 
   theme_bw() +
   facet_grid(cols = vars(FOD))
 
-
 dfv %>% 
-  filter(TimeSinceVibStart < 2.5 & TimeSinceVibStart > 0) %>% 
+  filter(TimeSinceVibStart < 2 & TimeSinceVibStart > 0) %>% 
   ggplot(aes(x = TimeSinceVibStart,
              y = rollingSpeedMedian,
              colour = factor(day))) + 
-  geom_smooth() + 
+  geom_smooth(se=F) + 
   theme_bw()
 
 

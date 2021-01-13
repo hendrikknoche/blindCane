@@ -72,7 +72,9 @@ dft$RunningScenarioCounter <-cumsum(dft$ScenarioStarts)
 
 dft$ObjDetID <- cumsum(dft$objDet)
 dft$RunningTime <- dft$Time_in_MS
-
+dft$TimeSincePreRow <- ifelse(dft$NewTimer>dft$RunningTime, 0, dft$RunningTime-dft$NewTimer)
+dft$VibrationDuration <-  
+  dft$TimeSinceLastVibration 
 
 #dft$ObjDetChangeHlp <- lag(dft$Object_detected)
 

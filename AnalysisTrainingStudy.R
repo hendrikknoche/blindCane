@@ -190,7 +190,7 @@ ggplot(data = daggSpeedTrain, aes(x = Range,
                  labels=c("White Cane", 
                           "Body-preview aEMA", 
                           "Normal aEMA"))+
-  ggtitle("Number of Objects Detected per Range and Condition")+
+  #ggtitle("Number of Objects Detected per Range and Condition")+
   ylab("Average Walking Speed") +
   scale_y_continuous()+
   theme_bw() +
@@ -235,7 +235,7 @@ ggplot(data = daggCollTrain, aes(x = Range,
                  labels=c("White Cane", 
                           "Body-preview aEMA", 
                           "Normal aEMA"))+
-  ggtitle("Number of Objects Detected per Range and Condition")+
+  #ggtitle("Number of Objects Detected per Range and Condition")+
   ylab("Average Number of collisions") +
   scale_y_continuous()+
   theme_bw() +
