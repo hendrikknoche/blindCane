@@ -8,7 +8,8 @@ options("digits.secs"=6)
 
 #Combine all data files into one data frame
 dft = readbulk::read_bulk('data', sep=';', na.strings = 'none', stringsAsFactors=FALSE)
-
+#create a row number to keep track of things
+dft$rowNum<-1:nrow(dft)
 #Make a new testID based on the file name
 dft$testID<-as.numeric(gsub("[^0-9.-]", "", substr(dft$File,7,10)))
 
@@ -65,22 +66,29 @@ dft$RunningScenarioCounter <-cumsum(dft$ScenarioStarts)
 # gsub('_', '-', data1$c)
 # dft$te
 # helper$FOD<- as.factor(helper,levels = c("Baseline", "Corridor", "large")
+load(file='data_all_Training.rda')
 
 #Make data frame into a .rda file for faster running time
 
 # add consistentTimeline
-
-dft$ObjDetID <- cumsum(dft$objDet)
+dft$newTestStarts<-ifelse(dft$testID>lag(dft$testID,default=0),1,0)
+dft$ObjDetID <- cumsum(dft$objDet+dft$newTestStarts)
 dft$RunningTime <- dft$Time_in_MS
 dft$TimeSincePreRow <- ifelse(dft$NewTimer>dft$RunningTime, 0, dft$RunningTime-dft$NewTimer)
-dft$VibrationDuration <-  
-  dft$TimeSinceLastVibration 
+dft[1,]$TimeSincePreRow = 0
+dft$GapObjDetID<-cumsum(dft$objDetStop+dft$newTestStarts)
+
+dft$GapObjDetID<-ifelse(substr(dft$Object_detected,1,1) == "B",NA,dft$GapObjDetID)
+dft$ActObjectDetID<-ifelse(substr(dft$Object_detected,1,1) == "B",dft$ObjDetID,NA)
+
+dfx<-
+  dft%>% select(GapObjDetID, TimeSincePreRow,rowNum) %>% group_by(GapObjDetID) %>% summarise(Gapdurationx=sum(TimeSincePreRow)) %>% View() 
+  right_join(dft) %>% arrange(rowNum)%>% slice(5992:6008)%>%View()
 
 #dft$ObjDetChangeHlp <- lag(dft$Object_detected)
 
 
-#create a row number to keep track of things
-dft$rowNum<-1:nrow(dft)
+
 # create median smoothed speed column 
 dft %<>% group_by(testID) %>% mutate(rollingSpeedMedian=rollmedian(x=Person_Speed,k=5,fill=NA,align = "left"))%>%ungroup()
 
