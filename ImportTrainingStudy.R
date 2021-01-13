@@ -82,8 +82,11 @@ dft$GapObjDetID<-ifelse(substr(dft$Object_detected,1,1) == "B",NA,dft$GapObjDetI
 dft$ActObjectDetID<-ifelse(substr(dft$Object_detected,1,1) == "B",dft$ObjDetID,NA)
 
 dfx<-
-  dft%>% select(GapObjDetID, TimeSincePreRow,rowNum) %>% group_by(GapObjDetID) %>% summarise(Gapdurationx=sum(TimeSincePreRow)) %>% View() 
-  right_join(dft) %>% arrange(rowNum)%>% slice(5992:6008)%>%View()
+  dft%>% filter(!is.na(GapObjDetID)) %>% select(GapObjDetID, TimeSincePreRow,rowNum) %>% group_by(GapObjDetID) %>% summarise(Gapdurationx=sum(TimeSincePreRow)) %>% View() 
+dft%>% filter(!is.na(GapObjDetID)) %>% select(GapObjDetID, TimeSincePreRow,rowNum) %>% group_by(GapObjDetID) %>% summarise(Gapdurationx=sum(TimeSincePreRow)) %>% right_join(dft) %>% arrange(rowNum)%>% slice(5992:6008)%>%View()
+
+tempdf<- dft %>% filter(!is.na(GapObjDetID)) %>% select(GapObjDetID, TimeSincePreRow,rowNum) %>% group_by(GapObjDetID) %>% summarise(Gapdurationx=sum(TimeSincePreRow)) 
+right_join(tempdf,dft) %>% arrange(rowNum) %>% slice(5992:6008) %>% View()
 
 #dft$ObjDetChangeHlp <- lag(dft$Object_detected)
 
