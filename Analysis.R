@@ -16,6 +16,7 @@ library(zoo)
 
 # Load all data files
 load("data_all.rda")
+load("data_all_Training.rda")
 
 
 # analysis on how detections affect speed
