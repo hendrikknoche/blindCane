@@ -49,7 +49,7 @@ dft$objColl <- ifelse(substr(dft$Object_collision, 1, 1) == "B" & dft$objcollBef
 dft$Object_detected <- gsub("null", "", dft$Object_detected)
 dft$objDetBefore <- c("", dft[1:(nrow(dft) - 1), ]$Object_detected)
 dft$objDet <- ifelse(substr(dft$Object_detected, 1, 1) == "B" & dft$objDetBefore == "", 1, 0)
-dft$objDetStop <- ifelse(substr(dft$objDetBefore, 1, 1) == "B" & dft$Object_detected == "", 1, 0)
+dft$objDetStop <- ifelse(substr(dft$Object_detected, 1, 1) == "B" & lead(dft$Object_detected) == "", 1, 0)
 
 # Use time stamp to calculate how long a test took
 dft$Time_stamp <- as.POSIXct(dft$Time_stamp, format = "%m/%d/%Y %H:%M:%S")
@@ -128,8 +128,6 @@ dft %<>%
 #   View()
 
 # dft$ObjDetChangeHlp <- lag(dft$Object_detected)
-
-
 
 # create median smoothed speed column
 dft %<>% group_by(testID) %>%
