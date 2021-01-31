@@ -1,6 +1,5 @@
 # Analysis 10 Participants Study ---------------------------------
 
-
 # Initialize the libraries
 library(readbulk)
 library(lubridate)
@@ -29,61 +28,27 @@ library(zoo)
 library(afex)
 library(emmeans)
 
-
 # GetData
-load("data_all_Participants.rda")
+load("data_Participants_All.rda")
 
-PIDTrialID <- dfp %>%
-  select(ParticipantID, testID) %>%
-  group_by(ParticipantID, testID) %>%
-  summarise(number = 1) %>%
-  mutate(runningNum = cumsum(number)) %>%
-  select(-number)
-dfp <- merge(dfp, PIDTrialID)
-
-plot(density(dfp$TimeSinceVibStart))
-plot(density(dfp$TimeSinceVibStop))
-
-# analysis on how detections affect speed
-onsets <- dfp %>%
-  filter(objDet == 1) %>%
-  select(ObjDetID,
-    VibStartTime = RunningTime,
-    SpeedAtVibStart = rollingSpeedMedian
-  )
-
-offsets <- dfp %>%
-  filter(objDetStop == 1) %>%
-  select(ObjDetID,
-    VibStopTime = RunningTime,
-    SpeedAtVibStop = rollingSpeedMedian
-  )
-
-dfp <- merge(dfp, onsets)
-dfp <- merge(dfp, offsets)
-
-mean(onsets$SpeedAtVibStart, trim = 0, na.rm = TRUE)
-mean(offsets$SpeedAtVibStop, trim = 0, na.rm = TRUE)
-
-
-dfp$TimeSinceVibStart <- dfp$RunningTime - dfp$VibStartTime
-dfp$TimeSinceVibStop <- dfp$RunningTime - dfp$VibStopTime
-
-
-dfp$SpeedDiffFromStart <- dfp$rollingSpeedMedian - dfp$SpeedAtVibStart
-dfp$SpeedDiffFromStop <- dfp$rollingSpeedMedian - dfp$SpeedAtVibStop
-
-
-# df$ObjDetChangeHlp <- lag(df$Object_detected)
-
+## The effect of vibration alerts ---------
+# Change in Rolling Median based on FODs when vibration starts
 dfp %>%
-  filter(TimeSinceVibStart < 5 & TimeSinceVibStart > 0) %>%
+  filter(TimeSinceVibStart < 4 & TimeSinceVibStart > 0) %>%
   ggplot(aes(
     x = TimeSinceVibStart,
     y = SpeedDiffFromStart
   )) +
   geom_smooth() +
-  theme_bw()
+  ylab("Change in Walking Speed") +
+  xlab("Time Since Alert") +
+  theme_bw()+
+  theme(legend.position="bottom", 
+        axis.text.x = element_text(size = 14), 
+        axis.text.y = element_text(size = 14), 
+        axis.title = element_text(size = 14)) +
+  scale_color_discrete("FOA") +
+  scale_shape_discrete("FOA")
 
 dfp %>%
   filter(TimeSinceVibStart < 5 & TimeSinceVibStart > 0) %>%
@@ -93,48 +58,83 @@ dfp %>%
     colour = FOD
   )) +
   geom_smooth() +
-  theme_bw()
+  ylab("Change in Walking Speed") +
+  xlab("Time Since Alert") +
+  theme_bw()+
+  theme(legend.position="bottom", 
+        axis.text.x = element_text(size = 14), 
+        axis.text.y = element_text(size = 14), 
+        axis.title = element_text(size = 14)) +
+  scale_color_discrete("FOA") +
+  scale_shape_discrete("FOA")
 
 dfp %>%
   filter(TimeSinceVibStart < 5 & TimeSinceVibStart > 0) %>%
   ggplot(aes(
     x = TimeSinceVibStart,
-    y = rollingSpeedMedian,
+    y = SpeedDiffFromStart,
     colour = FOD
   )) +
   geom_smooth() +
   theme_bw() +
-  facet_grid(cols = vars(Range))
+  ylab("Change in Walking Speed") +
+  xlab("Time Since Alert") +
+  facet_grid(rows = vars(Range))+
+  theme(legend.position="bottom", 
+        axis.text.x = element_text(size = 14), 
+        axis.text.y = element_text(size = 14), 
+        axis.title = element_text(size = 14)) +
+  scale_color_discrete("FOA") +
+  scale_shape_discrete("FOA")
 
 dfp %>%
   filter(TimeSinceVibStart < 5 & TimeSinceVibStart > 0) %>%
   ggplot(aes(
     x = TimeSinceVibStart,
-    y = rollingSpeedMedian,
+    y = SpeedDiffFromStart,
     colour = factor(Range)
   )) +
   geom_smooth(se = F) +
   theme_bw() +
-  facet_grid(cols = vars(FOD))
+  ylab("Change in Walking Speed") +
+  xlab("Time Since Alert") +
+  facet_grid(rows = vars(FOD))+
+  theme(legend.position="bottom", 
+        axis.text.x = element_text(size = 14), 
+        axis.text.y = element_text(size = 14), 
+        axis.title = element_text(size = 14)) +
+  scale_color_discrete("FOA") +
+  scale_shape_discrete("FOA")
 
 dfp %>%
-  filter(TimeSinceVibStart < 5 & TimeSinceVibStart > 0) %>%
+  filter(TimeSinceVibStart < 2 & TimeSinceVibStart > 0) %>%
   ggplot(aes(
     x = TimeSinceVibStart,
-    y = rollingSpeedMedian,
-    colour = factor(ParticipantID)
+    y = SpeedDiffFromStart
   )) +
-  geom_smooth() +
-  theme_bw()
+  geom_smooth(aes(se = FALSE,
+                  colour = factor(ParticipantID)
+                  )) +
+  #scale_color_manual(values="#999999") +
+  scale_color_grey() +
+  geom_smooth(se = FALSE) +
+  theme_bw() +
+  ylab("Change in Walking Speed") +
+  xlab("Time Since Alert") +
+  theme(legend.position="bottom", 
+        axis.text.x = element_text(size = 14), 
+        axis.text.y = element_text(size = 14), 
+        axis.title = element_text(size = 14)) #+
+  #scale_color_discrete("FOA") +
+  #scale_shape_discrete("FOA") 
 
-
-
+## New analysis
 
 daggByScenario <- dfp %>%
-  filter(Person_Speed < 3) %>%
-  select(ParticipantID, Scenario, FOD, Range, Person_Speed, objDet, objColl, Time_in_S) %>%
+  filter(PersonSpeed < 3) %>%
+  select(ParticipantID, Scenario, FOD, Range, PersonSpeed, objDet, objColl, TimeSeconds) %>%
   pivot_longer(
-    cols = Person_Speed:Time_in_S,
+    cols = PersonSpeed:TimeSeconds,
     names_to = "measure",
     values_to = "value"
   ) %>%
@@ -182,45 +182,44 @@ daggByPerson <- daggByScenPart %>%
   merge(PersonBaselines) %>%
   mutate(diffFromBL = Value - Baseline)
 
-
+#The shapiro test does not work
 daggByScenPart %>%
-  filter(measure == "Person_Speed", PersonAgg == "avg", ScenarioAgg == "avg") %>%
+  filter(measure == "PersonSpeed", PersonAgg == "avg", ScenarioAgg == "avg") %>%
   select(Value) %>%
   shapiro.test(Value)
 
 
 # Test significance of Walking Speed
 SpeedModel <- daggByPerson %>%
-  filter(measure == "Person_Speed", PersonAgg == "avg", ScenarioAgg == "avg") %>%
+  filter(measure == "PersonSpeed", PersonAgg == "avg", ScenarioAgg == "avg") %>%
   do(data.frame(tidy(lm(diffFromBL ~ FOD, data = .))))
+
 SpeedModel
 
 SpeedModelByDet <-
-  dfx <- daggByPerson %>%
+  
+dfx <- daggByPerson %>%
   filter(PersonAgg == "avg") %>%
-  filter((measure == "Person_Speed" & ScenarioAgg == "avg") | (measure == "objDet" & ScenarioAgg == "sum") | (measure == "objColl" & ScenarioAgg == "sum")) %>%
+  filter((measure == "PersonSpeed" & ScenarioAgg == "avg") | (measure == "objDet" & ScenarioAgg == "sum") | (measure == "objColl" & ScenarioAgg == "sum")) %>%
   select(ParticipantID, Value, diffFromBL, Range, FOD, measure) %>%
-  pivot_wider(names_from = measure, values_from = c(Value, diffFromBL), names_glue = "{measure}_{.value}")
-do(data.frame(tidy(lm(Person_Speed_Value ~ objDet_Value, data = .))))
+  pivot_wider(names_from = measure, values_from = c(Value, diffFromBL), names_glue = "{measure}_{.value}") %>%
+  do(data.frame(tidy(lm(PersonSpeed_Value ~ objDet_Value, data = .))))
 
-summary(lm(Person_Speed_Value ~ objDet_Value, data = dfx))
+summary(lm(PersonSpeed_Value ~ objDet_Value, data = dfx))
 summary(lm(objColl_Value ~ objDet_Value, data = dfx))
 
-summary(lm(Person_Speed_Value ~ objColl_Value, data = dfx))
-summary(lm(Person_Speed_Value ~ objDet_Value * objColl_Value, data = dfx))
-
+summary(lm(PersonSpeed_Value ~ objColl_Value, data = dfx))
+summary(lm(PersonSpeed_Value ~ objDet_Value * objColl_Value, data = dfx))
 
 summary(lm(objDet_Value ~ Range, data = dfx))
 
 summary(lm(objColl_Value ~ FOD, family = "poisson", data = dfx))
 
+summary(lm(PersonSpeed_Value ~ objColl_Value, data = dfx))
+summary(lm(PersonSpeed_Value ~ objDet_Value * objColl_Value, data = dfx))
 
-
-summary(lm(Person_Speed_Value ~ objColl_Value, data = dfx))
-summary(lm(Person_Speed_Value ~ objDet_Value * objColl_Value, data = dfx))
-
-summary(lm(Person_Speed_diffFromBL ~ objDet_diffFromBL * objColl_diffFromBL, data = dfx))
-summary(lm(Person_Speed_diffFromBL ~ objDet_diffFromBL * objColl_diffFromBL, data = dfx))
+summary(lm(PersonSpeed_diffFromBL ~ objDet_diffFromBL * objColl_diffFromBL, data = dfx))
+summary(lm(PersonSpeed_diffFromBL ~ objDet_diffFromBL * objColl_diffFromBL, data = dfx))
 
 SpeedModelByDet
 
@@ -239,25 +238,25 @@ ObjCollModel
 
 
 daggByPerson %>%
-  filter(measure == "Person_Speed", PersonAgg == "avg", ScenarioAgg == "avg") %>%
+  filter(measure == "PersonSpeed", PersonAgg == "avg", ScenarioAgg == "avg") %>%
   ggplot(aes(x = Range, y = Value, group = ParticipantID, colour = factor(ParticipantID))) +
   geom_line() +
   facet_grid(rows = vars(FOD))
 
 daggByPerson %>%
-  filter(measure == "Person_Speed", PersonAgg == "avg", ScenarioAgg == "avg") %>%
+  filter(measure == "PersonSpeed", PersonAgg == "avg", ScenarioAgg == "avg") %>%
   ggplot(aes(x = Range, y = diffFromBL, group = ParticipantID, colour = factor(ParticipantID))) +
   geom_line() +
   facet_grid(rows = vars(FOD))
 
 daggByPerson %>%
-  filter(measure == "Person_Speed", PersonAgg == "avg", ScenarioAgg == "avg") %>%
+  filter(measure == "PersonSpeed", PersonAgg == "avg", ScenarioAgg == "avg") %>%
   select(Value) %>%
   ggplot(aes(x = Value)) +
   geom_density()
 
 daggByPerson %>%
-  filter(measure == "Person_Speed", PersonAgg == "avg", ScenarioAgg == "avg") %>%
+  filter(measure == "PersonSpeed", PersonAgg == "avg", ScenarioAgg == "avg") %>%
   filter(FOD == "Corridor") %>%
   select(Value) %>%
   summarise(sd = sd(Value), mean = mean(Value), min = min(Value), max = max(Value))
@@ -268,7 +267,8 @@ dfxColl <- dfx %>%
   group_by(ParticipantID) %>%
   summarise(avgColl = mean(objColl_Value))
 
-dfx %>% summarise(sd = sd(objColl_Value), mean = mean(objColl_Value), min = min(objColl_Value), max = max(objColl_Value))
+dfx %>% 
+  summarise(sd = sd(objColl_Value), mean = mean(objColl_Value), min = min(objColl_Value), max = max(objColl_Value))
 
 
 sd(dfxColl$avgColl)
@@ -1623,3 +1623,44 @@ col4ICC <- dfx %>%
 psych::ICC(col4ICC)
 
 Yes
+
+# Make trail ID
+# PIDTrialID <- dfp %>%
+#  select(ParticipantID, testID) %>%
+#  group_by(ParticipantID, testID) %>%
+#  summarise(number = 1) %>%
+#  mutate(runningNum = cumsum(number)) %>%
+#  select(-number)
+# dfp <- merge(dfp, PIDTrialID)
+
+plot(density(dfp$TimeSinceVibStart))
+plot(density(dfp$TimeSinceVibStop))
+
+# analysis on how detections affect speed
+onsets <- dfp %>%
+  filter(objDet == 1) %>%
+  select(ObjDetID,
+    VibStartTime = RunningTime,
+    SpeedAtVibStart = rollingSpeedMedian
+  )
+
+offsets <- dfp %>%
+  filter(objDetStop == 1) %>%
+  select(ObjDetID,
+    VibStopTime = RunningTime,
+    SpeedAtVibStop = rollingSpeedMedian
+  )
+
+dfp <- merge(dfp, onsets)
+dfp <- merge(dfp, offsets)
+
+mean(onsets$SpeedAtVibStart, trim = 0, na.rm = TRUE)
+mean(offsets$SpeedAtVibStop, trim = 0, na.rm = TRUE)
+
+
+dfp$TimeSinceVibStart <- dfp$RunningTime - dfp$VibStartTime
+dfp$TimeSinceVibStop <- dfp$RunningTime - dfp$VibStopTime
+
+
+dfp$SpeedDiffFromStart <- dfp$rollingSpeedMedian - dfp$SpeedAtVibStart
+dfp$SpeedDiffFromStop <- dfp$rollingSpeedMedian - dfp$SpeedAtVibStop

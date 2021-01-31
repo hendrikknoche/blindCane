@@ -52,6 +52,8 @@ dft <- rename(dft, ParticipantID = Participant.ID)
 
 # Make FOD into a factor
 dft$FOD <- as.factor(dft$FOD)
+dft$FOD <- recode_factor(dft$FOD, Baseline="White Cane", WholeRoom="AWC: Conical View", Corridor="AWC: Tunnel View")
+dft$FOD <- factor(dft$FOD, levels=c("White Cane", "AWC: Conical View", "AWC: Tunnel View"))
 
 # count collisions
 dft$ObjectCollision <- gsub("null", "", dft$ObjectCollision)
@@ -74,6 +76,7 @@ dft$RunningScenarioCounter <- cumsum(dft$ScenarioStarts)
 dft$newTestStarts <- ifelse(dft$testID > lag(dft$testID, default = 0), 1, 0)
 dft$ObjDetID <- cumsum(dft$objDet)
 dft$ObjDetIDTest <- cumsum(dft$objDet + dft$newTestStarts)
+
 # dft$RunningTime <- dft$TimeSeconds
 dft$TimeSincePreRow <- ifelse(dft$NewTimer > dft$TimeSeconds, 0, dft$TimeSeconds - dft$NewTimer)
 dft[1, ]$TimeSincePreRow <- 0

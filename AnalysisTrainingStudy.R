@@ -121,9 +121,6 @@ daggByDFR <- dftSumTestID %>%
     lowerci = lower_ci(smean, se, count),
     upperci = upper_ci(smean, se, count))
 
-daggByDFR$FOD<-recode(daggByDFR$FOD, Baseline="White Cane", WholeRoom = "Open Range A-ema", Corridor = "Body Preview A-ema")
-daggByDFR$FOD<-factor(daggByDFR$FOD, levels=c("White Cane", "Open Range A-ema", "Body Preview A-ema"))
-
 ggplot(daggByDFR, aes(x = totalTimeTraining,
                       y = newAvgSpeed,
                       color = factor(Range),
@@ -160,9 +157,6 @@ daggDetectTrain <- dftSumTestID %>%
     se = ssd / sqrt(count),
     lowerci = lower_ci(smean, se, count),
     upperci = upper_ci(smean, se, count))
-
-daggDetectTrain$FOD<-recode(daggDetectTrain$FOD, Baseline="White Cane", WholeRoom="Open Range A-ema", Corridor="Body Preview A-ema")
-daggDetectTrain$FOD<-factor(daggDetectTrain$FOD, levels=c("White Cane", "Open Range A-ema", "Body Preview A-ema"))
 
 ggplot(daggDetectTrain, aes(x = Range, 
                               y = avgObjDet, 
@@ -207,9 +201,6 @@ daggSpeedTrain <- dftSumTestID %>%
     lowerci = lower_ci(smean, se, count),
     upperci = upper_ci(smean, se, count))
 
-daggSpeedTrain$FOD<-recode(daggSpeedTrain$FOD, Baseline="White Cane", WholeRoom="Open Range A-ema", Corridor="Body Preview A-ema")
-daggSpeedTrain$FOD<-factor(daggSpeedTrain$FOD, levels=c("White Cane", "Open Range A-ema", "Body Preview A-ema"))
-
 ggplot(data = daggSpeedTrain, aes(x = Range, 
                               y = newAvgSpeed, 
                               group = FOD, 
@@ -251,9 +242,6 @@ daggCollTrain <- dftSumTestID %>%
     se = ssd / sqrt(count),
     lowerci = lower_ci(smean, se, count),
     upperci = upper_ci(smean, se, count))
-
-daggCollTrain$FOD<-recode(daggCollTrain$FOD, Baseline="White Cane", WholeRoom="Open Range A-ema", Corridor="Body Preview A-ema")
-daggCollTrain$FOD<-factor(daggCollTrain$FOD, levels=c("White Cane", "Open Range A-ema", "Body Preview A-ema"))
 
 ggplot(data = daggCollTrain, aes(x = Range, 
                                   y = newObjColl, 

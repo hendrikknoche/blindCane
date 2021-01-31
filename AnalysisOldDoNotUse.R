@@ -14,7 +14,6 @@ library(zoo)
 # "rm('name of dataset')"
 
 # Load all data files
-load("data_all.rda")
 load("data_all_Training.rda")
 
 
