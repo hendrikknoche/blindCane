@@ -88,7 +88,7 @@ dfp %>%
   scale_shape_discrete("FOA")
 
 dfp %>%
-  filter(TimeSinceVibStart < 5 & TimeSinceVibStart > 0) %>%
+  filter(TimeSinceVibStart < 5 & TimeSinceVibStart > 0 & !is.na(TimeSinceVibStart)) %>%
   ggplot(aes(
     x = TimeSinceVibStart,
     y = SpeedDiffFromStart,
