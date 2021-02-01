@@ -113,7 +113,8 @@ dfp %>%
     y = SpeedDiffFromStart
   )) +
   geom_smooth(aes(se = FALSE,
-                  colour = factor(ParticipantID)
+                  #colour = factor(ParticipantID)
+                  shape = factor(ParticipantID)
                   )) +
   #scale_color_manual(values="#999999") +
   scale_color_grey() +
