@@ -32,21 +32,18 @@ dfp$Time_stamp <- as.POSIXct(dfp$Time_stamp, format = "%m/%d/%Y %H:%M:%S")
 
 # convert the timer into time in seconds
 dfp$Time_in_MS <- as.POSIXct(dfp$Timer, format = "%H:%M:%OS")
-dfp$Time_in_MS <- second(dfp$Time_in_MS)
-
-# The time of the row above
-dfp$NewTimer <- lag(dfp$Time_in_MS, 1)
+dfp$Time_in_MS <- second(dfp$Time_in_MS)+minute(dfp$Time_in_MS)*60+hour(dfp$Time_in_MS)*3660
 
 # Rename Columns
-dfp <- rename(dfp, Range = Detection_range_in_Meters)
-dfp <- rename(dfp, day = Day_nr.)
-dfp <- rename(dfp, PersonSpeed = Person_Speed)
-dfp <- rename(dfp, TimeSeconds = Time_in_MS)
-dfp <- rename(dfp, TimeStamp = Time_stamp)
-dfp <- rename(dfp, ObjectDistance = Distance_to_object)
-dfp <- rename(dfp, ObjectCollision = Object_collision)
-dfp <- rename(dfp, ObjectDetected = Object_detected)
-dfp <- rename(dfp, ParticipantID = Participant.ID)
+dfp <- dplyr::rename(dfp, Range = Detection_range_in_Meters)
+dfp <- dplyr::rename(dfp, day = Day_nr.)
+dfp <- dplyr::rename(dfp, PersonSpeed = Person_Speed)
+dfp <- dplyr::rename(dfp, TimeSeconds = Time_in_MS)
+dfp <- dplyr::rename(dfp, TimeStamp = Time_stamp)
+dfp <- dplyr::rename(dfp, ObjectDistance = Distance_to_object)
+dfp <- dplyr::rename(dfp, ObjectCollision = Object_collision)
+dfp <- dplyr::rename(dfp, ObjectDetected = Object_detected)
+dfp <- dplyr::rename(dfp, ParticipantID = Participant.ID)
 
 # Make FOD into a factor
 dfp$FOD <- as.factor(dfp$FOD)
@@ -67,6 +64,11 @@ dfp$ParticipantID <-ifelse(dfp$testID > 570 & dfp$testID < 596, 7, dfp$Participa
 dfp$ParticipantID <-ifelse(dfp$testID > 595 & dfp$testID < 621, 8, dfp$ParticipantID) 
 dfp$ParticipantID <-ifelse(dfp$testID > 620 & dfp$testID < 646, 9, dfp$ParticipantID)  
 dfp$ParticipantID <-ifelse(dfp$testID > 645 & dfp$testID < 671, 10, dfp$ParticipantID) 
+
+# The time of the row above
+dfp<- dfp %>% group_by(ParticipantID,testID) %>% mutate(NewTimer=lag(TimeSeconds,1))
+# $NewTimer <- lag(dfp$Time_in_MS, 1)
+
 
 # count collisions
 dfp$ObjectCollision <- gsub("null", "", dfp$ObjectCollision)
@@ -101,7 +103,7 @@ dfp %<>%
   filter(substr(ObjectDetected, 1, 1) != "B") %>%
   select(GapObjDetID, TimeSincePreRow) %>%
   group_by(GapObjDetID) %>%
-  summarise(Gapduration = sum(TimeSincePreRow)) %>% 
+  dplyr::summarise(Gapduration = sum(TimeSincePreRow)) %>% 
   right_join(dfp) %>% arrange(rowNum) %>% relocate(Gapduration)
 
 # Calculate detection duration  
@@ -109,7 +111,7 @@ dfp %<>%
   filter(substr(ObjectDetected, 1, 1) == "B") %>%
   select(ObjDetIDTest, TimeSincePreRow) %>%
   group_by(ObjDetIDTest) %>%
-  summarise(ObjDetDuration = sum(TimeSincePreRow)) %>% 
+  dplyr::summarise(ObjDetDuration = sum(TimeSincePreRow)) %>% 
   right_join(dfp) %>% arrange(rowNum) %>% relocate(ObjDetDuration,ObjectDetected)
 
 # create median smoothed speed column
@@ -165,7 +167,7 @@ save(dfp, file='data_Participants_All.rda', compress=TRUE)
 dfpSumTestID <- dfp %>% 
   filter(PersonSpeed<3)%>%
   group_by(testID, day, Scenario, FOD, Range)%>%
-  summarize(avgSpeed = mean(PersonSpeed),
+  dplyr::summarize(avgSpeed = mean(PersonSpeed),
             medianSpeed = median(PersonSpeed),
             maxSpeed = max(PersonSpeed),
             minSpeed = min(PersonSpeed),
