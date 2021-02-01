@@ -163,15 +163,15 @@ daggByScenario <- dfp %>%
     cols = PersonSpeed:TimeSeconds,
     names_to = "measure",
     values_to = "value"
-  ) %>%
+  )  %>%
   group_by(ParticipantID, Scenario, FOD, Range, measure) %>%
-  summarize(
+  dplyr::summarize(
     avg = mean(value),
     median = median(value),
     max = max(value),
     min = min(value),
     sum = sum(value, na.rm = TRUE)
-  ) %>%
+  ) %>% 
   mutate_each(funs(replace(., is.na(.), 0)), avg:sum) %>%
   pivot_longer(
     cols = avg:sum,
@@ -181,7 +181,7 @@ daggByScenario <- dfp %>%
 
 daggByScenPart <- daggByScenario %>%
   group_by(ParticipantID, FOD, Range, measure, ScenarioAgg) %>%
-  summarize(
+  dplyr::summarize(
     avg = mean(value),
     median = median(value)
   ) %>%
@@ -336,17 +336,17 @@ anova(lme1, lmeNull)
 
 dfFOD <- dfx %>%
   group_by(ParticipantID, FOD) %>%
-  summarize(avgColl = mean(objColl_Value))
+  dplyr::summarize(avgColl = mean(objColl_Value))
 do(data.frame(tidy(lm(avgColl ~ FOD, data = .))))
 
 dfFODbyPerson <- dfx %>%
   group_by(ParticipantID, FOD) %>%
-  summarize(avgColl = mean(objColl_Value), avgWS = mean(Person_Speed_Value)) %>%
+  dplyr::summarize(avgColl = mean(objColl_Value), avgWS = mean(Person_Speed_Value)) %>%
   ungroup()
 
 dfFODbyPerson %>%
   group_by(FOD) %>%
-  summarize(medColl = median(avgColl), sdColl = sd(avgColl), avgColl = mean(avgColl)) %>%
+  dplyr::summarize(medColl = median(avgColl), sdColl = sd(avgColl), avgColl = mean(avgColl)) %>%
   ungroup()
 
 dfFODbyPerson$FOD <- recode(dfFODbyPerson$FOD, Baseline = "white cane", Corridor = "body preview", WholeRoom = "open range")
@@ -410,7 +410,7 @@ daggAvgSpeed <- daggByPerson %>%
     ScenarioAgg == "avg"
   ) %>%
   select(Value) %>%
-  summarize(
+  dplyr::summarize(
     newAvgSpeed = mean(Value),
     smean = mean(Value, na.rm = TRUE),
     ssd = sd(Value, na.rm = TRUE),
@@ -472,7 +472,7 @@ daggPersonSpeed <- daggByPerson %>%
     ScenarioAgg == "avg"
   ) %>%
   select(diffFromBL) %>%
-  summarize(
+  dplyr::summarize(
     newDiffSpeed = mean(diffFromBL),
     smean = mean(diffFromBL, na.rm = TRUE),
     ssd = sd(diffFromBL, na.rm = TRUE),
@@ -534,7 +534,7 @@ daggAvgColl <- daggByPerson %>%
     ScenarioAgg == "sum"
   ) %>%
   select(Value) %>%
-  summarize(
+  dplyr::summarize(
     newAvgColl = mean(Value),
     smean = mean(Value, na.rm = TRUE),
     ssd = sd(Value, na.rm = TRUE),
@@ -597,7 +597,7 @@ daggDiffColl <- daggByPerson %>%
     ScenarioAgg == "sum"
   ) %>%
   select(diffFromBL) %>%
-  summarize(
+  dplyr::summarize(
     newAvgColl = mean(diffFromBL),
     smean = mean(diffFromBL, na.rm = TRUE),
     ssd = sd(diffFromBL, na.rm = TRUE),
@@ -659,7 +659,7 @@ daggAvgDet <- daggByPerson %>%
     ScenarioAgg == "sum"
   ) %>%
   select(Value) %>%
-  summarize(
+  dplyr::summarize(
     newAvgDet = mean(Value),
     smean = mean(Value, na.rm = TRUE),
     ssd = sd(Value, na.rm = TRUE),
@@ -722,7 +722,7 @@ daggDiffDet <- daggByPerson %>%
     ScenarioAgg == "sum"
   ) %>%
   select(diffFromBL) %>%
-  summarize(
+  dplyr::summarize(
     newAvgDet = mean(diffFromBL),
     smean = mean(diffFromBL, na.rm = TRUE),
     ssd = sd(diffFromBL, na.rm = TRUE),
@@ -781,7 +781,7 @@ ggplot(data = daggDiffDet, aes(
 daggByScen <- dfp %>%
   filter(Person_Speed < 3) %>%
   group_by(testID, day, Scenario, FOD, Range) %>%
-  summarize(
+  dplyr::summarize(
     avgSpeed = mean(Person_Speed),
     medianSpeed = median(Person_Speed),
     maxSpeed = max(Person_Speed),
@@ -915,7 +915,7 @@ qqPlot(daggNoScen1$avgSpeed)
 # Setting up a dataset for avg. speed for each day.
 daggByDFR <- daggByScenPart %>%
   group_by(Range, FOD) %>%
-  summarize(
+  dplyr::summarize(
     totalTimeTraining = max(totalTimeTraining),
     newAvgSpeed = mean(avgSpeed),
     smean = mean(avgSpeed, na.rm = TRUE),
@@ -1025,7 +1025,7 @@ summary(lm(avgSpeed ~ totalTimeTrainingHrs, data = daggByScenPart))
 
 daggSpeed <- daggByScenPart %>%
   group_by(Range, FOD) %>%
-  summarize(
+  dplyr::summarize(
     newAvgSpeed = mean(avgSpeed),
     smean = mean(avgSpeed, na.rm = TRUE),
     ssd = sd(avgSpeed, na.rm = TRUE),
