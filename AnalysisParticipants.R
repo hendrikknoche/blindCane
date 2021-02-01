@@ -107,17 +107,42 @@ dfp %>%
   scale_shape_discrete("FOA")
 
 dfp %>%
-  filter(TimeSinceVibStart < 2 & TimeSinceVibStart > 0) %>%
+  filter(TimeSinceVibStart < 4 & TimeSinceVibStart > 0) %>%
   ggplot(aes(
     x = TimeSinceVibStart,
     y = SpeedDiffFromStart
   )) +
-  geom_smooth(aes(se = FALSE,
-                  #colour = factor(ParticipantID)
-                  shape = factor(ParticipantID)
-                  )) +
+  geom_smooth(aes(
+    shape = factor(ParticipantID)
+  ),
+  colour = "gray80",
+  se = FALSE
+  ) +
   #scale_color_manual(values="#999999") +
-  scale_color_grey() +
+  geom_smooth(se = FALSE) +
+  theme_bw() +
+  ylab("Change in Walking Speed") +
+  xlab("Time Since Alert") +
+  theme(legend.position="bottom", 
+        axis.text.x = element_text(size = 14), 
+        axis.text.y = element_text(size = 14), 
+        axis.title = element_text(size = 14)) #+
+#scale_color_discrete("FOA") +
+#scale_shape_discrete("FOA") 
+
+dfp %>%
+  filter(TimeSinceVibStart < 4 & TimeSinceVibStart > 0 & ParticipantID != 2 & ParticipantID != 9 & ParticipantID != 10) %>%
+  ggplot(aes(
+    x = TimeSinceVibStart,
+    y = SpeedDiffFromStart
+  )) +
+  geom_smooth(aes(
+                  shape = factor(ParticipantID)
+                  ),
+              colour = "gray80",
+              se = FALSE
+              ) +
+  #scale_color_manual(values="#999999") +
   geom_smooth(se = FALSE) +
   theme_bw() +
   ylab("Change in Walking Speed") +
