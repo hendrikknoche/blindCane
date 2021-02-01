@@ -122,13 +122,13 @@ dfp %<>% filter(PersonSpeed < 3) %>% group_by(testID) %>%
 # analysis on how detections affect speed
 onsets <- dfp %>%
   filter(objDet == 1) %>%
-  select(ObjDetID,
+  select(ObjDetIDTest,
          VibStartTime = TimeSeconds,
          SpeedAtVibStart = rollingSpeedMedian)
 
 offsets <- dfp %>%
   filter(objDetStop == 1) %>%
-  select(ObjDetID,
+  select(ObjDetIDTest,
          VibStopTime = TimeSeconds,
          SpeedAtVibStop = rollingSpeedMedian
   )
