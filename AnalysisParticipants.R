@@ -30,6 +30,7 @@ library(emmeans)
 
 # GetData
 load("data_Participants_All.rda")
+load("data_Participants_SumTestID.rda")
 
 ## The effect of vibration alerts ---------
 # Change in Rolling Median based on FODs when vibration starts
@@ -94,20 +95,23 @@ dfp %>%
     y = SpeedDiffFromStart,
     colour = factor(Range)
   )) +
+  geom_hline(yintercept=0) +
   geom_smooth(se = F) +
   theme_bw() +
-  ylab("Change in Walking Speed") +
-  xlab("Time Since Alert") +
-  facet_grid(rows = vars(FOD))+
+  ylab("Change in Walking Speed From Alert Onset (m/s)") +
+  xlab("Time Since Alert Onset (seconds)") +
+  #facet_grid(rows = vars(FOD))+
   theme(legend.position="bottom", 
         axis.text.x = element_text(size = 14), 
         axis.text.y = element_text(size = 14), 
-        axis.title = element_text(size = 14)) +
-  scale_color_discrete("FOA") +
-  scale_shape_discrete("FOA")
+        axis.title = element_text(size = 14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 14)) +
+  scale_color_discrete("") +
+  scale_shape_discrete("")
 
 dfp %>%
-  filter(TimeSinceVibStart < 4 & TimeSinceVibStart > 0) %>%
+  filter(TimeSinceVibStart < 4 & TimeSinceVibStart > 0 & !is.na(TimeSinceVibStart)) %>%
   ggplot(aes(
     x = TimeSinceVibStart,
     y = SpeedDiffFromStart
@@ -118,11 +122,14 @@ dfp %>%
   colour = "gray80",
   se = FALSE
   ) +
-  #scale_color_manual(values="#999999") +
-  geom_smooth(se = FALSE) +
+  geom_hline(yintercept=0) +
+  geom_smooth(
+   fill = "skyblue2"
+    ) +
+  coord_cartesian(ylim = c(-0.08,0.08)) +
   theme_bw() +
-  ylab("Change in Walking Speed") +
-  xlab("Time Since Alert") +
+  ylab("Change in Walking Speed From Alert Onset (m/s)") +
+  xlab("Time Since Alert Onset") +
   theme(legend.position="bottom", 
         axis.text.x = element_text(size = 14), 
         axis.text.y = element_text(size = 14), 
@@ -145,7 +152,7 @@ dfp %>%
   #scale_color_manual(values="#999999") +
   geom_smooth(se = FALSE) +
   theme_bw() +
-  ylab("Change in Walking Speed") +
+  ylab("Change in Walking Speed (m/s)") +
   xlab("Time Since Alert") +
   theme(legend.position="bottom", 
         axis.text.x = element_text(size = 14), 
@@ -675,15 +682,18 @@ ggplot(data = daggAvgDet, aes(
   x = Range,
   y = newAvgDet,
   group = FOD,
-  color = FOD
+  color = FOD,
+  shape = FOD
 )) +
   geom_point(
     position = position_dodge(0.1),
-    alpha = 1
+    alpha = 1,
+    size=5
   ) +
   geom_line(
     position = position_dodge(0.1),
-    alpha = 1, size = 1
+    alpha = 1, 
+    size = 1
   ) +
   geom_errorbar(aes(
     ymin = lowerci,
@@ -693,24 +703,32 @@ ggplot(data = daggAvgDet, aes(
   color = "Black",
   position = position_dodge(0.1)
   ) +
-  geom_text(aes(label = round(newAvgDet, 2)),
-    size = 6,
-    alpha = 1,
-    position = position_dodge(0.6),
-    vjust = -0.5
-  ) +
-  scale_fill_hue(
-    name = "Condition",
-    labels = c(
-      "White Cane",
-      "Body-preview aEMA",
-      "Normal aEMA"
-    )
-  ) +
-  ggtitle("Number of Detections per Range and Condition") +
-  ylab("Number of Detections") +
-  scale_y_continuous() +
-  theme_bw()
+  #geom_text(aes(label = round(newAvgDet, 2)),
+  #  size = 6,
+  #  alpha = 1,
+  #  position = position_dodge(0.6),
+  #  vjust = -0.5
+  #) +
+  #scale_fill_hue(
+  #  name = "Condition",
+  #  labels = c(
+  #    "White Cane",
+  #    "Body-preview aEMA",
+  #    "Normal aEMA"
+  #  )
+  #) +
+  ylab("Averge Number of Alerts") +
+  xlab("Preview Range in Meters") +
+  scale_y_continuous()+
+  theme_bw()+
+  theme(legend.position="bottom", 
+        axis.text.x = element_text(size = 14), 
+        axis.text.y = element_text(size = 14), 
+        axis.title = element_text(size = 14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 14)) +
+  scale_color_discrete("") +
+  scale_shape_discrete("")
 
 # Plot difference in average collisions ----------------
 
@@ -814,9 +832,117 @@ daggByScenPart <- daggByScenPart %>%
 
 # Below, a summary of our data. In total, 420 tests were completed over three days (140 per day), using three different Field Of Detections (FOD - Baseline, WholeRoom and Corridor). The WholeRoom and Corridor differ between three ranges (two, three and four meters), while the Baseline represents the original white cane (one meter range). Scenarios describe the obstacle courses the system was tested on (20 different scenarios). In addition, each test logged the walking speed of the participant, the amount of objects detected by the cane/EMA, the amount of collisions by the user and the completion time of the individual obstacle courses.
 
-summary(daggByScenPart)
+PartSpeed <- dfpSumTestID %>%
+  group_by(ParticipantID) %>%
+  dplyr::summarize(
+    avgSpeed = mean(avgSpeed),
+    maxSpeed = max(avgSpeed),
+    minSpeed = min(avgSpeed)
+    )
 
-summary(aov(avgSpeed ~ Range * FOD + Error(ParticipantID), data = daggByScenPart))
+mean(dfpSumTestID$avgSpeed)
+sd(dfpSumTestID$avgSpeed)
+
+mean(dfp$ObjDetDuration, na.rm=TRUE)
+
+summary(dfpSumTestID)
+
+PartVibDur <- dfp %>%
+  group_by(ParticipantID) %>%
+  dplyr::summarize(
+    avgVibDur = mean(ObjDetDuration, na.rm=TRUE),
+    maxVibDur = max(ObjDetDuration, na.rm=TRUE),
+    minVibDur = min(ObjDetDuration, na.rm=TRUE)
+  )
+
+
+PartAlert <- dfpSumTestID %>%
+  group_by(FOD) %>%
+  dplyr::summarize(
+    avgAlert = mean(objectDetected),
+    maxAlert = max(objectDetected),
+    minAlert = min(objectDetected)
+  )
+
+# Below, a summary of our data.
+summary(dfpSumTestID)
+
+# Training time on walking speed 
+summary(lm(avgSpeed ~ RunNumber, data=dfpSumTestID))
+
+# Training time and range on walking speed (all data)
+summary(lm(avgSpeed ~ Range + RunNumber, data=dfpSumTestID))
+
+# split data fram based on FOD
+WCDat <- dfpSumTestID[dfpSumTestID$FOD=="White Cane",]
+wrDat <- dfpSumTestID[dfpSumTestID$FOD=="Conical View AWC",]
+corrDat <- dfpSumTestID[dfpSumTestID$FOD=="Tunnel View AWC",]
+
+
+
+TunnelDat <- dfpSumTestID[dfpSumTestID$FOD!="Conical View AWC",]
+ConicalDat <- dfpSumTestID[dfpSumTestID$FOD!="Tunnel View AWC",]
+
+# Training time and range on alerts (whole room data)
+summary(lm(avgSpeed ~ Range + RunNumber, data=ConicalDat))
+
+# Training time and range on alerts (corridor data)
+summary(lm(avgSpeed ~ Range + RunNumber, data=TunnelDat))
+
+# Training time and range on alerts (corridor data)
+summary(lm(avgSpeed ~ Range + RunNumber, family="poisson", data=TunnelDat))
+
+# Training time and range on alerts (whole room data)
+summary(glm(objectDetected ~ Range + RunNumber, family="poisson", data=ConicalDat))
+
+# Training time and range on alerts (corridor data)
+summary(lm(objectDetected ~ Range + RunNumber, family="poisson", data=TunnelDat))
+
+# Training time and range on walking speed (whole room data)
+summary(lm(avgSpeed ~ Range + RunNumber, data=wrDat))
+
+# Training time and range on walking speed (corridor data)
+summary(lm(avgSpeed ~ Range + RunNumber, data=corrDat))
+
+# Training time and range on alerts (whole room data)
+summary(lm(objectDetected ~ Range + RunNumber, data=wrDat))
+
+# Training time and range on alerts (corridor data)
+summary(lm(objectDetected ~ Range + RunNumber, data=corrDat))
+
+# Training time and FOD on walking speed (all data)
+summary(lm(avgSpeed ~ FOD + RunNumber, data=dfpSumTestID))
+
+# Training time and FOD on walking speed (all data)
+summary(lm(objectDetected ~ FOD + RunNumber, data=dfpSumTestID))
+
+# Training time and Collisions on walking speed (all data)
+summary(lm(avgSpeed ~ objectCollisions + RunNumber,data=dfpSumTestID))
+
+# Training time and Collisions on walking speed (baseline)
+summary(lm(avgSpeed ~ objectCollisions+RunNumber, data=WCDat))
+
+# Training time and Collisions on walking speed (corridor)
+summary(lm(avgSpeed ~ objectCollisions+RunNumber, data=corrDat))
+
+# Training time and Collisions on walking speed (Whole Room)
+summary(lm(avgSpeed ~ objectCollisions+RunNumber, data=wrDat))
+
+# Training time and Detections on walking speed (all data)
+summary(lm(avgSpeed ~ objectDetected*objectCollisions + RunNumber, data = dfpSumTestID))
+
+# Training time and Detections on walking speed (Baseline)
+summary(lm(avgSpeed ~ objectDetected + RunNumber, data = WCDat))
+
+# Training time and Detections on walking speed (Corridor)
+summary(lm(avgSpeed ~ objectDetected + RunNumber, data = corrDat))
+
+# Training time and Detections on walking speed (Whole Room)
+summary(lm(avgSpeed ~ objectDetected + RunNumber, data = wrDat))
+
+
+
+summary(aov(avgSpeed ~ Range * FOD + Error(ParticipantID), data = dfpSumTestID))
 
 ## Walking speed =================================
 
@@ -827,7 +953,7 @@ summary(aov(avgSpeed ~ Range * FOD + Error(ParticipantID), data = daggByScenPart
 # To get an overview of the walking speed we first made a histogram with a density curve to see how our data is distributed
 
 # Histogram and curve of avgSpeed
-ggplot(daggByScenPart, aes(x = avgSpeed)) +
+ggplot(dfpSumTestID, aes(x = avgSpeed)) +
   geom_histogram(aes(y = ..density..), colour = "black", fill = "white") +
   geom_density(alpha = .2, fill = "#FF6666") +
   geom_vline(aes(xintercept = mean(avgSpeed)), color = "blue", linetype = "dashed", size = 1) +
@@ -835,11 +961,11 @@ ggplot(daggByScenPart, aes(x = avgSpeed)) +
 
 # As we can see the data is close to by not quite normally distributed, a Shapiro Wilks test confirms this as the p-values show a significant difference and, thereby rejects the nullhypothesis of the data following a normal distributed.
 
-shapiro.test(daggByScen$objectCollisions)
+shapiro.test(dfpSumTestID$objectCollisions)
 
 # A qq-plots also shows that the date is close to normal distributed with only a few outliers that was a lot faster than the rest.
 
-qqPlot(daggByScenPart$avgSpeed)
+qqPlot(dfpSumTestID$avgSpeed)
 
 # To get a better overview of the outliers we made a heatmap of the 420 test to see if we could locate the outliers.
 

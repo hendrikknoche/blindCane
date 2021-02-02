@@ -30,22 +30,50 @@ dft %>%
   filter(TimeSinceVibStart < 2.5 & TimeSinceVibStart > 0) %>%
   ggplot(aes(
     x = TimeSinceVibStart,
-    y = rollingSpeedMedian,
-    colour = FOD
+    y = SpeedDiffFromStart
   )) +
-  geom_smooth() +
-  theme_bw() 
+  geom_smooth(aes(
+    colour = factor(FOD)
+  ),
+  #colour = "gray80",
+  alpha = 0.5,
+  se = FALSE
+  ) +
+  #geom_smooth(
+  #  colour = "magenta1",
+  #  se = FALSE
+  #) +
+  theme_bw() +
+  ylab("Change in Walking Speed From Alert Onset (m/s)") +
+  xlab("Time Since Alert Onset") +
+  theme(legend.position="bottom", 
+        axis.text.x = element_text(size = 14), 
+        axis.text.y = element_text(size = 14), 
+        axis.title = element_text(size = 14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 14)) +
+  scale_color_discrete("") #+
+#scale_shape_discrete("FOA")  
 
 # Change in Speed Difference based on FODs when vibration starts
 dft %>%
   filter(TimeSinceVibStart < 2.5 & TimeSinceVibStart > 0) %>%
   ggplot(aes(
     x = TimeSinceVibStart,
-    y = SpeedDiffFromStart,
-    colour = FOD
+    y = SpeedDiffFromStart
   )) +
+  geom_hline(yintercept=0) +
   geom_smooth() +
-  theme_bw()
+  theme_bw() +
+  ylab("Change in Walking Speed From Alert Onset (m/s)") +
+  xlab("Time Since Alert Onset (seconds)") +
+  theme(legend.position="bottom", 
+        axis.text.x = element_text(size = 14), 
+        axis.text.y = element_text(size = 14), 
+        axis.title = element_text(size = 14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 14)) +
+  scale_color_discrete("") #+
 
 # Change based on FODs and range when vibration starts
 dft %>%
@@ -64,23 +92,62 @@ dft %>%
   filter(TimeSinceVibStart < 2 & TimeSinceVibStart > 0) %>%
   ggplot(aes(
     x = TimeSinceVibStart,
-    y = rollingSpeedMedian,
-    colour = factor(Range)
+    y = SpeedDiffFromStart
   )) +
-  geom_smooth(se = F) +
+  geom_hline(yintercept=0) +
+  geom_smooth(aes(
+    colour = factor(FOD)
+  ),
+  #colour = "gray80",
+  alpha = 0.5,
+  se = FALSE
+  ) +
+  #geom_smooth(
+  #  colour = "magenta1",
+  #  se = FALSE
+  #) +
   theme_bw() +
-  facet_grid(cols = vars(FOD))
+  ylab("Change in Walking Speed From Alert Onset (m/s)") +
+  xlab("Time Since Alert Onset (seconds)") +
+  theme(legend.position="bottom", 
+        axis.text.x = element_text(size = 14), 
+        axis.text.y = element_text(size = 14), 
+        axis.title = element_text(size = 14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 14)) +
+  scale_color_discrete("") #+
+#scale_shape_discrete("FOA") 
 
 # Change based on day when vibration starts
 dft %>%
   filter(TimeSinceVibStart < 2 & TimeSinceVibStart > 0) %>%
   ggplot(aes(
     x = TimeSinceVibStart,
-    y = rollingSpeedMedian,
-    colour = factor(day)
+    y = SpeedDiffFromStart
   )) +
-  geom_smooth(se = F) +
-  theme_bw()
+  geom_hline(yintercept=0) +
+  geom_smooth(aes(
+    colour = factor(day)
+  ),
+  #colour = "gray80",
+  alpha = 0.5,
+  se = FALSE
+  ) +
+  #geom_smooth(
+  #  colour = "magenta1",
+  #  se = FALSE
+  #) +
+  theme_bw() +
+  ylab("Change in Walking Speed From Alert Onset (m/s)") +
+  xlab("Time Since Alert Onset (seconds)") +
+  theme(legend.position="bottom", 
+        axis.text.x = element_text(size = 14), 
+        axis.text.y = element_text(size = 14), 
+        axis.title = element_text(size = 14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 14)) +
+  scale_color_discrete("Day") #+
+#scale_shape_discrete("FOA") 
 
 # Change in Rolling Median based on FODs when vibration stops
 dft %>%
@@ -137,13 +204,15 @@ ggplot(daggByDFR, aes(x = totalTimeTraining,
   facet_grid(cols = vars(FOD), labeller=labeller(daggByDFR$FOD)) +
   theme(legend.position="bottom", 
         panel.spacing = unit(2, "lines"), 
-        axis.text.x = element_text(size = 12), 
-        axis.text.y = element_text(size = 12), 
-        axis.title = element_text(size=12)) + 
-        ylab("Average Walking Speed") +
-        xlab("Training Time") +
-        scale_color_discrete("Range") +
-        scale_shape_discrete("Range")
+        axis.text.x = element_text(size = 14), 
+        axis.text.y = element_text(size = 14), 
+        axis.title = element_text(size=14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 14)) + 
+        ylab("Average Walking Speed (m/s)") +
+        xlab("Training Time in Seconds") +
+        scale_color_discrete("Preview Range in Meters") +
+        scale_shape_discrete("Preview Range in Meters")
 
 
 #Number of Alerts
@@ -158,11 +227,12 @@ daggDetectTrain <- dftSumTestID %>%
     lowerci = lower_ci(smean, se, count),
     upperci = upper_ci(smean, se, count))
 
-ggplot(daggDetectTrain, aes(x = Range, 
-                              y = avgObjDet, 
-                              group = FOD, 
-                              color = FOD,
-                              shape = FOD)) +
+ggplot(daggDetectTrain, 
+       aes(x = Range, 
+           y = avgObjDet, 
+           group = FOD, 
+           color = FOD,
+           shape = FOD)) +
   geom_point(position = position_dodge(0.1), alpha=1, size=5)+
   geom_line(position = position_dodge(0.1), 
             alpha = 1, 
@@ -172,20 +242,23 @@ ggplot(daggDetectTrain, aes(x = Range,
                 width = 0.2, 
                 color = "Black", 
                 position = position_dodge(0.1)) +
-  scale_fill_hue(name="Condition", 
-                 labels=c("White Cane", 
-                          "Body-preview A-ema", 
-                          "Normal A-ema"))+
+  #scale_fill_hue(name="Condition", 
+                 #labels=c("White Cane", 
+                #          "Body-preview A-ema", 
+                #          "Normal A-ema"))+
   #ggtitle("Number of Objects Detected per Range and Condition")+
   ylab("Average number of Alerts") +
+  xlab("Preview Range in Meter") +
   scale_y_continuous()+
   theme_bw() + 
   theme(legend.position="bottom", 
         axis.text.x = element_text(size = 14), 
         axis.text.y = element_text(size = 14), 
-        axis.title = element_text(size = 14)) +
-        scale_color_discrete("FOA") +
-        scale_shape_discrete("FOA")
+        axis.title = element_text(size = 14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 14)) +
+        scale_color_discrete("") +
+        scale_shape_discrete("")
   
 
 
@@ -221,14 +294,17 @@ ggplot(data = daggSpeedTrain, aes(x = Range,
                           "Normal aEMA"))+
   #ggtitle("Number of Objects Detected per Range and Condition")+
   ylab("Average Walking Speed") +
+  xlab("Preview Range in Meter") +
   scale_y_continuous()+
-  theme_bw() +
+  theme_bw() + 
   theme(legend.position="bottom", 
         axis.text.x = element_text(size = 14), 
         axis.text.y = element_text(size = 14), 
-        axis.title = element_text(size = 14)) +
-        scale_color_discrete("FOA") +
-        scale_shape_discrete("FOA")
+        axis.title = element_text(size = 14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 14)) +
+  scale_color_discrete("") +
+  scale_shape_discrete("")
 
 
 # Number of Collisions
@@ -263,14 +339,17 @@ ggplot(data = daggCollTrain, aes(x = Range,
                           "Normal aEMA"))+
   #ggtitle("Number of Objects Detected per Range and Condition")+
   ylab("Average Number of collisions") +
-  scale_y_continuous()+
-  theme_bw() +
+  xlab("Preview Range in Meter") +
+  scale_y_continuous() +
+  theme_bw() + 
   theme(legend.position="bottom", 
         axis.text.x = element_text(size = 14), 
         axis.text.y = element_text(size = 14), 
-        axis.title = element_text(size = 14)) +
-        scale_color_discrete("FOA") +
-        scale_shape_discrete("FOA")
+        axis.title = element_text(size = 14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 14)) +
+  scale_color_discrete("") +
+  scale_shape_discrete("")
 
 
 ## Statistical analysis -------

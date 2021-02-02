@@ -34,10 +34,7 @@ dft$Time_stamp <- as.POSIXct(dft$Time_stamp, format = "%m/%d/%Y %H:%M:%S")
 
 # convert the timer into time in seconds
 dft$Time_in_MS <- as.POSIXct(dft$Timer, format = "%H:%M:%OS")
-dft$Time_in_MS <- second(dft$Time_in_MS)
-
-# The time of the row above
-dft$NewTimer <- lag(dft$Time_in_MS, 1)
+dft$Time_in_MS <- second(dft$Time_in_MS)+minute(dft$Time_in_MS)*60+hour(dft$Time_in_MS)*3660
 
 # Rename Columns
 dft <- rename(dft, Range = Detection_range_in_Meters)
@@ -52,8 +49,12 @@ dft <- rename(dft, ParticipantID = Participant.ID)
 
 # Make FOD into a factor
 dft$FOD <- as.factor(dft$FOD)
-dft$FOD <- recode_factor(dft$FOD, Baseline="White Cane", WholeRoom="AWC: Conical View", Corridor="AWC: Tunnel View")
-dft$FOD <- factor(dft$FOD, levels=c("White Cane", "AWC: Conical View", "AWC: Tunnel View"))
+dft$FOD <- recode_factor(dft$FOD, Baseline="White Cane", WholeRoom="Conical View AWC", Corridor="Tunnel View AWC")
+dft$FOD <- factor(dft$FOD, levels=c("White Cane", "Conical View AWC", "Tunnel View AWC"))
+
+# The time of the row above
+dft<- dft %>% group_by(ParticipantID,testID) %>% mutate(NewTimer=lag(TimeSeconds,1))
+# $NewTimer <- lag(dfp$Time_in_MS, 1)
 
 # count collisions
 dft$ObjectCollision <- gsub("null", "", dft$ObjectCollision)
@@ -88,7 +89,7 @@ dft %<>%
   filter(substr(ObjectDetected, 1, 1) != "B") %>%
   select(GapObjDetID, TimeSincePreRow) %>%
   group_by(GapObjDetID) %>%
-  summarise(Gapduration = sum(TimeSincePreRow)) %>% 
+  dplyr::summarise(Gapduration = sum(TimeSincePreRow)) %>% 
   right_join(dft) %>% arrange(rowNum) %>% relocate(Gapduration)
 
 # Calculate detection duration  
@@ -96,7 +97,7 @@ dft %<>%
   filter(substr(ObjectDetected, 1, 1) == "B") %>%
   select(ObjDetIDTest, TimeSincePreRow) %>%
   group_by(ObjDetIDTest) %>%
-  summarise(ObjDetDuration = sum(TimeSincePreRow)) %>% 
+  dplyr::summarise(ObjDetDuration = sum(TimeSincePreRow)) %>% 
   right_join(dft) %>% arrange(rowNum) %>% relocate(ObjDetDuration,ObjectDetected)
 
 # create median smoothed speed column
@@ -156,6 +157,8 @@ dftSumTestID <- dft %>%
             medianSpeed = median(PersonSpeed),
             maxSpeed = max(PersonSpeed),
             minSpeed = min(PersonSpeed),
+            avgVibDuration = mean(ObjDetDuration),
+            avgGabDuration = mean(Gapduration),
             objectDetected = sum(objDet,na.rm = TRUE),
             objectCollisions = sum(objColl,na.rm = TRUE),
             Time = max(TimeSeconds))%>% 

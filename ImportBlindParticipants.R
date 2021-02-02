@@ -47,8 +47,8 @@ dfp <- dplyr::rename(dfp, ParticipantID = Participant.ID)
 
 # Make FOD into a factor
 dfp$FOD <- as.factor(dfp$FOD)
-dfp$FOD<-recode_factor(dfp$FOD, Baseline="White Cane", WholeRoom="AWC: Conical View", Corridor="AWC: Tunnel View")
-dfp$FOD <- factor(dfp$FOD, levels=c("White Cane", "AWC: Conical View", "AWC: Tunnel View"))
+dfp$FOD<-recode_factor(dfp$FOD, Baseline="White Cane", WholeRoom="Conical View AWC", Corridor="Tunnel View AWC")
+dfp$FOD <- factor(dfp$FOD, levels=c("White Cane", "Conical View AWC", "Tunnel View AWC"))
 
 # Fix Range
 dfp$Range[dfp$Range == 0.7] <- 1
@@ -68,7 +68,6 @@ dfp$ParticipantID <-ifelse(dfp$testID > 645 & dfp$testID < 671, 10, dfp$Particip
 # The time of the row above
 dfp<- dfp %>% group_by(ParticipantID,testID) %>% mutate(NewTimer=lag(TimeSeconds,1))
 # $NewTimer <- lag(dfp$Time_in_MS, 1)
-
 
 # count collisions
 dfp$ObjectCollision <- gsub("null", "", dfp$ObjectCollision)
@@ -122,13 +121,13 @@ dfp %<>% filter(PersonSpeed < 3) %>% group_by(testID) %>%
 # analysis on how detections affect speed
 onsets <- dfp %>%
   filter(objDet == 1) %>%
-  select(ObjDetIDTest,
+  select(ObjDetID,
          VibStartTime = TimeSeconds,
          SpeedAtVibStart = rollingSpeedMedian)
 
 offsets <- dfp %>%
   filter(objDetStop == 1) %>%
-  select(ObjDetIDTest,
+  select(ObjDetID,
          VibStopTime = TimeSeconds,
          SpeedAtVibStop = rollingSpeedMedian
   )
@@ -166,11 +165,13 @@ save(dfp, file='data_Participants_All.rda', compress=TRUE)
 # Group Data set based on TestID
 dfpSumTestID <- dfp %>% 
   filter(PersonSpeed<3)%>%
-  group_by(testID, day, Scenario, FOD, Range)%>%
+  group_by(ParticipantID, testID, day, Scenario, FOD, Range)%>%
   dplyr::summarize(avgSpeed = mean(PersonSpeed),
             medianSpeed = median(PersonSpeed),
             maxSpeed = max(PersonSpeed),
             minSpeed = min(PersonSpeed),
+            avgVibDuration = mean(ObjDetDuration),
+            avgGabDuration = mean(Gapduration),
             objectDetected = sum(objDet,na.rm = TRUE),
             objectCollisions = sum(objColl,na.rm = TRUE),
             Time = max(TimeSeconds))%>% 
@@ -178,6 +179,15 @@ dfpSumTestID <- dfp %>%
 
 #add Coloum with sum of total time spent 
 dfpSumTestID$totalTimeTraining<-round(cumsum(dfpSumTestID$Time))
+
+#add Coloum with total time spent for a given FOD with a given Range
+dfpSumTestID <- dfpSumTestID %>% group_by(ParticipantID)%>%mutate(TrainingByParticipant=round(cumsum(Time)))
+
+#Add coloum with run number
+dfpSumTestID <- dfpSumTestID %>% group_by(ParticipantID) %>% mutate(RunNumber = 1:n())
+
+#add Coloum with total time spent for a given FOD with a given Range
+dfpSumTestID <- dfpSumTestID%>%group_by(FOD,day,Range)%>%mutate(timeFDRtrain=round(cumsum(Time)))
 
 #add Coloum with total time spent for a given FOD with a given Range
 dfpSumTestID <- dfpSumTestID%>%group_by(FOD,day,Range)%>%mutate(timeFDRtrain=round(cumsum(Time)))
