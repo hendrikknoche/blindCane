@@ -6,11 +6,15 @@ library(zoo)
 
 options("digits.secs"=6)
 
+#temporal masking - for how long does an ended vibration alert mask such that we cannot distinguish it from a previous alert?
+vibContinuationMaskingLength = 3
+
+
 # Combine all data files into one data frame
-dfp = readbulk::read_bulk('dataParticipants', sep=';', na.strings = 'none', stringsAsFactors=FALSE)
+# dfp = readbulk::read_bulk('dataParticipants', sep=';', na.strings = 'none', stringsAsFactors=FALSE)
 
 #Save the imported files
-save(dfp, file='data_Participants_Raw.rda', compress=TRUE)
+# save(dfp, file='data_Participants_Raw.rda', compress=TRUE)
 
 #Load
 load("data_Participants_Raw.rda")
@@ -69,18 +73,6 @@ dfp$ParticipantID <-ifelse(dfp$testID > 645 & dfp$testID < 671, 10, dfp$Particip
 dfp<- dfp %>% group_by(ParticipantID,testID) %>% mutate(NewTimer=lag(TimeSeconds,1))
 # $NewTimer <- lag(dfp$Time_in_MS, 1)
 
-# count collisions
-dfp$ObjectCollision <- gsub("null", "", dfp$ObjectCollision)
-dfp$objcollBefore <- c("", dfp[1:(nrow(dfp) - 1), ]$ObjectCollision) #shift one row
-dfp$objColl <- ifelse(substr(dfp$ObjectCollision, 1, 1) == "B" & dfp$objcollBefore == "", 1, 0)
-dfp$objCollStop <- ifelse(substr(dfp$ObjectCollision, 1, 1) == "B" & lead(dfp$ObjectCollision) == "", 1, 0)
-
-# count detections
-dfp$ObjectDetected <- gsub("null", "", dfp$ObjectDetected)
-dfp$objDetBefore <- c("", dfp[1:(nrow(dfp) - 1), ]$ObjectDetected) #shift one row
-dfp$objDet <- ifelse(substr(dfp$ObjectDetected, 1, 1) == "B" & dfp$objDetBefore == "", 1, 0)
-dfp$objDetStop <- ifelse(substr(dfp$ObjectDetected, 1, 1) == "B" & lead(dfp$ObjectDetected) == "", 1, 0)
-
 # Keep track on when a new scenario starts
 dfp$ScenarioBefore <- lag(dfp$Scenario, default = 99999)
 dfp$ScenarioStarts <- ifelse(!(dfp$Scenario == dfp$ScenarioBefore), 1, 0)
@@ -96,6 +88,51 @@ dfp$TimeSincePreRow <- ifelse(dfp$NewTimer > dfp$TimeSeconds, 0, dfp$TimeSeconds
 dfp[1, ]$TimeSincePreRow <- 0
 dfp$GapObjDetID <- cumsum(dfp$objDetStop + dfp$newTestStarts)
 dfp$totalTime <- cumsum(dfp$TimeSincePreRow)
+
+
+# count collisions
+dfp$ObjectCollision <- gsub("null", "", dfp$ObjectCollision)
+dfp$objcollBefore <- c("", dfp[1:(nrow(dfp) - 1), ]$ObjectCollision) #shift one row
+dfp$objColl <- ifelse(substr(dfp$ObjectCollision, 1, 1) == "B" & dfp$objcollBefore == "", 1, 0)
+dfp$objCollStop <- ifelse(substr(dfp$ObjectCollision, 1, 1) == "B" & lead(dfp$ObjectCollision) == "", 1, 0)
+
+# count detections
+dfp$ObjectDetected <- gsub("null", "", dfp$ObjectDetected)
+dfp$objDetBefore <- c("", dfp[1:(nrow(dfp) - 1), ]$ObjectDetected) #shift one row
+dfp$objDet <- ifelse(substr(dfp$ObjectDetected, 1, 1) == "B" & dfp$objDetBefore == "" & dfp$ObjectDistance>1, 1, 0)
+dfp$objDetStop <- ifelse(substr(dfp$ObjectDetected, 1, 1) == "B" & lead(dfp$ObjectDetected) == "", 1, 0)
+
+#setup physical detections
+dfp$PhysDetOngoing <- ifelse(substr(dfp$ObjectDetected, 1, 1) == "B" & dfp$ObjectDistance<=1, 1, 0)
+dfp$PhysDetBefore <- c("", dfp[1:(nrow(dfp) - 1), ]$PhysDetOngoing) #shift one row
+dfp$PhysDetStart<-  ifelse(dfp$PhysDetOngoing == 1 & dfp$PhysDetBefore == 0 , 1, 0)
+  # create their physical detection IDs and mark all rows with them
+dfp %<>%
+  ungroup() %>%
+  select(rowNum, PhysDetStart, PhysDetOngoing) %>%
+  filter(PhysDetOngoing == 1) %>%
+  dplyr::mutate(physDetID = cumsum(PhysDetStart)) %>%
+  right_join(dfp, by = c("rowNum", "PhysDetStart", "PhysDetOngoing")) %>%
+  arrange(rowNum) 
+
+ # create time since beginning of physical detection
+dfp %<>% 
+  select(physDetID, TimeSeconds) %>%
+  group_by(physDetID) %>%
+  dplyr::summarize(physDetStart = min(TimeSeconds)) %>%
+  right_join(dfp, na_matches = "never") %>%
+  dplyr::arrange(rowNum) %>%
+  dplyr::mutate(TimeSincePhysDetStart=TimeSeconds-physDetStart)
+  
+  #create speed changes from physDetstart
+dfp %<>% 
+  filter(PhysDetStart==1) %>%
+  select(physDetID, PersonSpeed) %>%
+  group_by(physDetID) %>%
+  dplyr::summarise(SpeedAtPhysDetStart=dplyr::first(PersonSpeed)) %>% 
+  right_join(dfp, na_matches = "never") %>% arrange(rowNum) %>%
+  dplyr::mutate(SpeedChangeFromPhysDetStart=PersonSpeed-SpeedAtPhysDetStart) 
+
 
 # Calculate Gap duration  
 dfp %<>%
