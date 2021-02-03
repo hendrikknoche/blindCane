@@ -11,10 +11,10 @@ vibContinuationMaskingLength = 3
 
 
 # Combine all data files into one data frame
-# dfp = readbulk::read_bulk('dataParticipants', sep=';', na.strings = 'none', stringsAsFactors=FALSE)
+dfp = readbulk::read_bulk('dataParticipants', sep=';', na.strings = 'none', stringsAsFactors=FALSE)
 
 #Save the imported files
-# save(dfp, file='data_Participants_Raw.rda', compress=TRUE)
+save(dfp, file='data_Participants_Raw.rda', compress=TRUE)
 
 #Load
 load("data_Participants_Raw.rda")
@@ -125,7 +125,7 @@ dfp$RunningScenarioCounter <- cumsum(dfp$ScenarioStarts)
 # Add consistentTimeline
 dfp$newTestStarts <- ifelse(dfp$testID > lag(dfp$testID, default = 0), 1, 0)
 dfp$ObjDetID <- cumsum(dfp$objDet)
-dfp$ObjDetIDTest <- cumsum(dfp$objDet + dfp$newTestStarts)
+dfp$ObjDetID <- cumsum(dfp$objDet + dfp$newTestStarts)
 
 # dfp$RunningTime <- dfp$TimeSeconds
 dfp$TimeSincePreRow <- ifelse(dfp$NewTimer > dfp$TimeSeconds, 0, dfp$TimeSeconds - dfp$NewTimer)
@@ -144,8 +144,8 @@ dfp %<>%
 # Calculate detection duration  
 dfp %<>%
   filter(substr(ObjectDetected, 1, 1) == "B") %>%
-  select(ObjDetIDTest, TimeSincePreRow) %>%
-  group_by(ObjDetIDTest) %>%
+  select(ObjDetID, TimeSincePreRow) %>%
+  group_by(ObjDetID) %>%
   dplyr::summarise(ObjDetDuration = sum(TimeSincePreRow)) %>% 
   right_join(dfp) %>% arrange(rowNum) %>% relocate(ObjDetDuration,ObjectDetected)
 
@@ -185,7 +185,7 @@ col_order <- c("rowNum", "day", "ParticipantID", "testID", "newTestStarts", "Ran
                "Scenario", "ScenarioStarts", "ScenarioBefore", "RunningScenarioCounter",                
                "TimeStamp", "Timer", "TimeSeconds", "NewTimer", "TimeSincePreRow", "totalTime",           
                "ObjectCollision", "objColl", "objcollBefore", "objCollStop",                      
-               "ObjectDetected", "objDetBefore", "objDet", "ObjDetID", "ObjDetIDTest", "objDetStop", "ObjectDistance", "ObjDetDuration", "GapObjDetID", "Gapduration",
+               "ObjectDetected", "objDetBefore", "objDet", "ObjDetID", "objDetStop", "ObjectDistance", "ObjDetDuration", "GapObjDetID", "Gapduration",
                "VibStartTime", "VibStopTime", "TimeSinceVibStart", "TimeSinceVibStop", "SpeedDiffFromStart", "SpeedDiffFromStop",                   
                "PersonSpeed", "rollingSpeedMedian", "SpeedAtVibStart", "SpeedAtVibStop",
                "Person_pos_X", "Person_pos_Y", "Person_orientation", 
