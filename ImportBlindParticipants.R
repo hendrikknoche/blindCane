@@ -89,6 +89,8 @@ dfp$objDetStop <- ifelse(substr(dfp$ObjectDetected, 1, 1) == "B" & lead(dfp$Obje
 dfp$PhysDetOngoing <- ifelse(substr(dfp$ObjectDetected, 1, 1) == "B" & dfp$ObjectDistance<=1, 1, 0)
 dfp$PhysDetBefore <- c("", dfp[1:(nrow(dfp) - 1), ]$PhysDetOngoing) #shift one row
 dfp$PhysDetStart<-  ifelse(dfp$PhysDetOngoing == 1 & dfp$PhysDetBefore == 0 , 1, 0)
+dfp$physDetID <- cumsum(dfp$PhysDetStart + dfp$newTestStarts)
+
   # create their physical detection IDs and mark all rows with them
 dfp %<>%
   ungroup() %>%
@@ -98,14 +100,16 @@ dfp %<>%
   right_join(dfp, by = c("rowNum", "PhysDetStart", "PhysDetOngoing")) %>%
   arrange(rowNum) 
 
+xxxxx
+
  # create time since beginning of physical detection
 dfp %<>% 
   select(physDetID, TimeSeconds) %>%
   group_by(physDetID) %>%
-  dplyr::summarize(physDetStart = min(TimeSeconds)) %>%
+  dplyr::summarize(physDetStartTime = min(TimeSeconds)) %>%
   right_join(dfp, na_matches = "never") %>%
   dplyr::arrange(rowNum) %>%
-  dplyr::mutate(TimeSincePhysDetStart=TimeSeconds-physDetStart)
+  dplyr::mutate(TimeSincePhysDetStart=TimeSeconds-physDetStartTime)
   
   #create speed changes from physDetstart
 dfp %<>% 
@@ -124,7 +128,6 @@ dfp$RunningScenarioCounter <- cumsum(dfp$ScenarioStarts)
 
 # Add consistentTimeline
 dfp$newTestStarts <- ifelse(dfp$testID > lag(dfp$testID, default = 0), 1, 0)
-dfp$ObjDetID <- cumsum(dfp$objDet)
 dfp$ObjDetID <- cumsum(dfp$objDet + dfp$newTestStarts)
 
 # dfp$RunningTime <- dfp$TimeSeconds
