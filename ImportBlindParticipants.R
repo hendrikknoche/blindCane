@@ -73,23 +73,6 @@ dfp$ParticipantID <-ifelse(dfp$testID > 645 & dfp$testID < 671, 10, dfp$Particip
 dfp<- dfp %>% group_by(ParticipantID,testID) %>% mutate(NewTimer=lag(TimeSeconds,1))
 # $NewTimer <- lag(dfp$Time_in_MS, 1)
 
-# Keep track on when a new scenario starts
-dfp$ScenarioBefore <- lag(dfp$Scenario, default = 99999)
-dfp$ScenarioStarts <- ifelse(!(dfp$Scenario == dfp$ScenarioBefore), 1, 0)
-dfp$RunningScenarioCounter <- cumsum(dfp$ScenarioStarts)
-
-# Add consistentTimeline
-dfp$newTestStarts <- ifelse(dfp$testID > lag(dfp$testID, default = 0), 1, 0)
-dfp$ObjDetID <- cumsum(dfp$objDet)
-dfp$ObjDetIDTest <- cumsum(dfp$objDet + dfp$newTestStarts)
-
-# dfp$RunningTime <- dfp$TimeSeconds
-dfp$TimeSincePreRow <- ifelse(dfp$NewTimer > dfp$TimeSeconds, 0, dfp$TimeSeconds - dfp$NewTimer)
-dfp[1, ]$TimeSincePreRow <- 0
-dfp$GapObjDetID <- cumsum(dfp$objDetStop + dfp$newTestStarts)
-dfp$totalTime <- cumsum(dfp$TimeSincePreRow)
-
-
 # count collisions
 dfp$ObjectCollision <- gsub("null", "", dfp$ObjectCollision)
 dfp$objcollBefore <- c("", dfp[1:(nrow(dfp) - 1), ]$ObjectCollision) #shift one row
@@ -100,7 +83,7 @@ dfp$objCollStop <- ifelse(substr(dfp$ObjectCollision, 1, 1) == "B" & lead(dfp$Ob
 dfp$ObjectDetected <- gsub("null", "", dfp$ObjectDetected)
 dfp$objDetBefore <- c("", dfp[1:(nrow(dfp) - 1), ]$ObjectDetected) #shift one row
 dfp$objDet <- ifelse(substr(dfp$ObjectDetected, 1, 1) == "B" & dfp$objDetBefore == "" & dfp$ObjectDistance>1, 1, 0)
-dfp$objDetStop <- ifelse(substr(dfp$ObjectDetected, 1, 1) == "B" & lead(dfp$ObjectDetected) == "", 1, 0)
+dfp$objDetStop <- ifelse(substr(dfp$ObjectDetected, 1, 1) == "B" & lead(dfp$ObjectDetected) == "" & dfp$ObjectDistance>1, 1, 0)
 
 #setup physical detections
 dfp$PhysDetOngoing <- ifelse(substr(dfp$ObjectDetected, 1, 1) == "B" & dfp$ObjectDistance<=1, 1, 0)
@@ -134,6 +117,22 @@ dfp %<>%
   dplyr::mutate(SpeedChangeFromPhysDetStart=PersonSpeed-SpeedAtPhysDetStart) 
 
 
+# Keep track on when a new scenario starts
+dfp$ScenarioBefore <- lag(dfp$Scenario, default = 99999)
+dfp$ScenarioStarts <- ifelse(!(dfp$Scenario == dfp$ScenarioBefore), 1, 0)
+dfp$RunningScenarioCounter <- cumsum(dfp$ScenarioStarts)
+
+# Add consistentTimeline
+dfp$newTestStarts <- ifelse(dfp$testID > lag(dfp$testID, default = 0), 1, 0)
+dfp$ObjDetID <- cumsum(dfp$objDet)
+dfp$ObjDetIDTest <- cumsum(dfp$objDet + dfp$newTestStarts)
+
+# dfp$RunningTime <- dfp$TimeSeconds
+dfp$TimeSincePreRow <- ifelse(dfp$NewTimer > dfp$TimeSeconds, 0, dfp$TimeSeconds - dfp$NewTimer)
+dfp[1, ]$TimeSincePreRow <- 0
+dfp$GapObjDetID <- cumsum(dfp$objDetStop + dfp$newTestStarts)
+dfp$totalTime <- cumsum(dfp$TimeSincePreRow)
+
 # Calculate Gap duration  
 dfp %<>%
   filter(substr(ObjectDetected, 1, 1) != "B") %>%
@@ -164,7 +163,7 @@ onsets <- dfp %>%
 
 offsets <- dfp %>%
   filter(objDetStop == 1) %>%
-  select(ObjDetID,
+  select(rowNum,ObjDetID,
          VibStopTime = TimeSeconds,
          SpeedAtVibStop = rollingSpeedMedian
   )
