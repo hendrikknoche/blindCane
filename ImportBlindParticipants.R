@@ -92,13 +92,13 @@ dfp$PhysDetStart<-  ifelse(dfp$PhysDetOngoing == 1 & dfp$PhysDetBefore == 0 , 1,
 dfp$physDetID <- cumsum(dfp$PhysDetStart + dfp$newTestStarts)
 
   # create their physical detection IDs and mark all rows with them
-dfp %<>%
-  ungroup() %>%
-  select(rowNum, PhysDetStart, PhysDetOngoing) %>%
-  filter(PhysDetOngoing == 1) %>%
-  dplyr::mutate(physDetID = cumsum(PhysDetStart)) %>%
-  right_join(dfp, by = c("rowNum", "PhysDetStart", "PhysDetOngoing")) %>%
-  arrange(rowNum) 
+# dfp %<>%
+#   ungroup() %>%
+#   select(rowNum, PhysDetStart, PhysDetOngoing) %>%
+#   filter(PhysDetOngoing == 1) %>%
+#   dplyr::mutate(physDetID = cumsum(PhysDetStart)) %>%
+#   right_join(dfp, by = c("rowNum", "PhysDetStart", "PhysDetOngoing")) %>%
+#   arrange(rowNum) 
 
 xxxxx
 
