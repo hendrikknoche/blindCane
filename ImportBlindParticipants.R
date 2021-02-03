@@ -21,6 +21,7 @@ load("data_Participants_Raw.rda")
 
 # Make a new testID based on the file name
 dfp$testID <- as.numeric(gsub("[^0-9.-]", "", substr(dfp$File, 7, 10)))
+dfp$newTestStarts <- ifelse(dfp$testID > lag(dfp$testID, default = 0), 1, 0)
 
 # Delete Test.ID Columns as the fist 18 are wrong
 dfp$Test.ID <- NULL
@@ -73,6 +74,7 @@ dfp$ParticipantID <-ifelse(dfp$testID > 645 & dfp$testID < 671, 10, dfp$Particip
 dfp<- dfp %>% group_by(ParticipantID,testID) %>% mutate(NewTimer=lag(TimeSeconds,1))
 # $NewTimer <- lag(dfp$Time_in_MS, 1)
 
+
 # count collisions
 dfp$ObjectCollision <- gsub("null", "", dfp$ObjectCollision)
 dfp$objcollBefore <- c("", dfp[1:(nrow(dfp) - 1), ]$ObjectCollision) #shift one row
@@ -91,14 +93,7 @@ dfp$PhysDetBefore <- c("", dfp[1:(nrow(dfp) - 1), ]$PhysDetOngoing) #shift one r
 dfp$PhysDetStart<-  ifelse(dfp$PhysDetOngoing == 1 & dfp$PhysDetBefore == 0 , 1, 0)
 dfp$physDetID <- cumsum(dfp$PhysDetStart + dfp$newTestStarts)
 
-  # create their physical detection IDs and mark all rows with them
-# dfp %<>%
-#   ungroup() %>%
-#   select(rowNum, PhysDetStart, PhysDetOngoing) %>%
-#   filter(PhysDetOngoing == 1) %>%
-#   dplyr::mutate(physDetID = cumsum(PhysDetStart)) %>%
-#   right_join(dfp, by = c("rowNum", "PhysDetStart", "PhysDetOngoing")) %>%
-#   arrange(rowNum) 
+
 
 xxxxx
 
@@ -127,7 +122,6 @@ dfp$ScenarioStarts <- ifelse(!(dfp$Scenario == dfp$ScenarioBefore), 1, 0)
 dfp$RunningScenarioCounter <- cumsum(dfp$ScenarioStarts)
 
 # Add consistentTimeline
-dfp$newTestStarts <- ifelse(dfp$testID > lag(dfp$testID, default = 0), 1, 0)
 dfp$ObjDetID <- cumsum(dfp$objDet + dfp$newTestStarts)
 
 # dfp$RunningTime <- dfp$TimeSeconds
