@@ -81,15 +81,21 @@ dfp$objcollBefore <- c("", dfp[1:(nrow(dfp) - 1), ]$ObjectCollision) #shift one 
 dfp$objColl <- ifelse(substr(dfp$ObjectCollision, 1, 1) == "B" & dfp$objcollBefore == "", 1, 0)
 dfp$objCollStop <- ifelse(substr(dfp$ObjectCollision, 1, 1) == "B" & lead(dfp$ObjectCollision) == "", 1, 0)
 
-dfp %<>% 
-  dplyr::group_by(testID) %>% 
+dfp %<>% dplyr::group_by(testID) %>% 
   dplyr::mutate(ObjectCollision=gsub("null", "", ObjectCollision),
                 objCollStart = ifelse(substr(ObjectCollision, 1, 1) == "B" & dplyr::lag(ObjectCollision) == "", 1, 0),
+                objColl = ifelse(substr(ObjectCollision, 1, 1) == "B" & dplyr::lag(ObjectCollision) == "", 1, 0), #not necessary but to make sure downstream code doesn't require changes
                 objCollStop =  ifelse(substr(ObjectCollision, 1, 1) == "B" & dplyr::lead(ObjectCollision) == "", 1, 0),
                 objCollAfter = lead(ObjectCollision))%>%
   ungroup()
 
-# count detections
+# event on-going
+# event start
+# event stop
+# event IDs (3x)
+# time since last event (3x)
+
+# count augmented detections
 dfp$ObjectDetected <- gsub("null", "", dfp$ObjectDetected)
 dfp$objDetBefore <- c("", dfp[1:(nrow(dfp) - 1), ]$ObjectDetected) #shift one row
 dfp$objDet <- ifelse(substr(dfp$ObjectDetected, 1, 1) == "B" & dfp$objDetBefore == "" & dfp$ObjectDistance>1, 1, 0)
@@ -134,6 +140,9 @@ dfp$RunningScenarioCounter <- cumsum(dfp$ScenarioStarts)
 
 # Add consistentTimeline
 dfp$ObjDetID <- cumsum(dfp$objDet + dfp$newTestStarts)
+
+#first getting out all cases of detection, create IDs and merge back 
+# create time counters for each time since last augVib, physDet, coll 
 
 # dfp$RunningTime <- dfp$TimeSeconds
 dfp$TimeSincePreRow <- ifelse(dfp$NewTimer > dfp$TimeSeconds, 0, dfp$TimeSeconds - dfp$NewTimer)
