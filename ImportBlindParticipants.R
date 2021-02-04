@@ -3,6 +3,7 @@ library(tidyverse)
 library(readbulk)
 library(lubridate)
 library(zoo)
+library(magrittr)
 
 options("digits.secs"=6)
 
@@ -40,19 +41,19 @@ dfp$Time_in_MS <- as.POSIXct(dfp$Timer, format = "%H:%M:%OS")
 dfp$Time_in_MS <- second(dfp$Time_in_MS)+minute(dfp$Time_in_MS)*60+hour(dfp$Time_in_MS)*3660
 
 # Rename Columns
-dfp <- dplyr::rename(dfp, Range = Detection_range_in_Meters)
-dfp <- dplyr::rename(dfp, day = Day_nr.)
-dfp <- dplyr::rename(dfp, PersonSpeed = Person_Speed)
-dfp <- dplyr::rename(dfp, TimeSeconds = Time_in_MS)
-dfp <- dplyr::rename(dfp, TimeStamp = Time_stamp)
-dfp <- dplyr::rename(dfp, ObjectDistance = Distance_to_object)
-dfp <- dplyr::rename(dfp, ObjectCollision = Object_collision)
-dfp <- dplyr::rename(dfp, ObjectDetected = Object_detected)
-dfp <- dplyr::rename(dfp, ParticipantID = Participant.ID)
+dfp%<>% dplyr::rename(Range = Detection_range_in_Meters,
+                         day = Day_nr.,
+                         PersonSpeed = Person_Speed,
+                         TimeSeconds = Time_in_MS,
+                         TimeStamp = Time_stamp,
+                         ObjectDistance = Distance_to_object,
+                         ObjectCollision = Object_collision,
+                         ObjectDetected = Object_detected,
+                         ParticipantID = Participant.ID)
 
 # Make FOD into a factor
 dfp$FOD <- as.factor(dfp$FOD)
-dfp$FOD<-recode_factor(dfp$FOD, Baseline="White Cane", WholeRoom="Conical View AWC", Corridor="Tunnel View AWC")
+dfp$FOD <- recode_factor(dfp$FOD, Baseline="White Cane", WholeRoom="Conical View AWC", Corridor="Tunnel View AWC")
 dfp$FOD <- factor(dfp$FOD, levels=c("White Cane", "Conical View AWC", "Tunnel View AWC"))
 
 # Fix Range
@@ -71,9 +72,10 @@ dfp$ParticipantID <-ifelse(dfp$testID > 620 & dfp$testID < 646, 9, dfp$Participa
 dfp$ParticipantID <-ifelse(dfp$testID > 645 & dfp$testID < 671, 10, dfp$ParticipantID) 
 
 # The time of the row above
-dfp<- dfp %>% group_by(ParticipantID,testID) %>% mutate(NewTimer=lag(TimeSeconds,1))
+dfp<- dfp %>% group_by(ParticipantID,testID) %>% mutate(NewTimer=lag(TimeSeconds,1)) %>% ungroup()
 # $NewTimer <- lag(dfp$Time_in_MS, 1)
-
+dfp$TimeSincePrevRow <- ifelse(dfp$NewTimer > dfp$TimeSeconds, 0, dfp$TimeSeconds - dfp$NewTimer)
+dfp[1, ]$TimeSincePrevRow <- 0
 
 # count collisions
 dfp$ObjectCollision <- gsub("null", "", dfp$ObjectCollision)
@@ -86,14 +88,22 @@ dfp %<>% dplyr::group_by(testID) %>%
                 objCollStart = ifelse(substr(ObjectCollision, 1, 1) == "B" & dplyr::lag(ObjectCollision) == "", 1, 0),
                 objColl = ifelse(substr(ObjectCollision, 1, 1) == "B" & dplyr::lag(ObjectCollision) == "", 1, 0), #not necessary but to make sure downstream code doesn't require changes
                 objCollStop =  ifelse(substr(ObjectCollision, 1, 1) == "B" & dplyr::lead(ObjectCollision) == "", 1, 0),
-                objCollAfter = lead(ObjectCollision))%>%
-  ungroup()
+                objCollAfter = lead(ObjectCollision),
+                objCollInTestID=cumsum(objCollStart),
+                objCollGapInTestID=cumsum(objCollStop))%>%
+                dplyr::group_by(testID,objCollInTestID) %>%
+                dplyr::mutate(TimeSinceObjCollStart=cumsum(TimeSincePrevRow),
+                              TimeSinceObjCollStart=ifelse(objCollInTestID==0,NA,TimeSinceObjCollStart))%>%
+                dplyr::group_by(testID,objCollGapInTestID) %>%
+                dplyr::mutate(TimeSinceObjCollStop=cumsum(TimeSincePrevRow),
+                              TimeSinceObjCollStop=ifelse(objCollGapInTestID==0,NA,TimeSinceObjCollStop))%>%
+                ungroup()
 
 # event on-going
 # event start
 # event stop
 # event IDs (3x)
-# time since last event (3x)
+# time since last eventStart (3x)
 
 # count augmented detections
 dfp$ObjectDetected <- gsub("null", "", dfp$ObjectDetected)
@@ -145,25 +155,23 @@ dfp$ObjDetID <- cumsum(dfp$objDet + dfp$newTestStarts)
 # create time counters for each time since last augVib, physDet, coll 
 
 # dfp$RunningTime <- dfp$TimeSeconds
-dfp$TimeSincePreRow <- ifelse(dfp$NewTimer > dfp$TimeSeconds, 0, dfp$TimeSeconds - dfp$NewTimer)
-dfp[1, ]$TimeSincePreRow <- 0
 dfp$GapObjDetID <- cumsum(dfp$objDetStop + dfp$newTestStarts)
-dfp$totalTime <- cumsum(dfp$TimeSincePreRow)
+dfp$totalTime <- cumsum(dfp$TimeSincePrevRow)
 
 # Calculate Gap duration  
 dfp %<>%
   filter(substr(ObjectDetected, 1, 1) != "B") %>%
-  select(GapObjDetID, TimeSincePreRow) %>%
+  select(GapObjDetID, TimeSincePrevRow) %>%
   group_by(GapObjDetID) %>%
-  dplyr::summarise(Gapduration = sum(TimeSincePreRow)) %>% 
+  dplyr::summarise(Gapduration = sum(TimeSincePrevRow)) %>% 
   right_join(dfp) %>% arrange(rowNum) %>% relocate(Gapduration)
 
 # Calculate detection duration  
 dfp %<>%
   filter(substr(ObjectDetected, 1, 1) == "B") %>%
-  select(ObjDetID, TimeSincePreRow) %>%
+  select(ObjDetID, TimeSincePrevRow) %>%
   group_by(ObjDetID) %>%
-  dplyr::summarise(ObjDetDuration = sum(TimeSincePreRow)) %>% 
+  dplyr::summarise(ObjDetDuration = sum(TimeSincePrevRow)) %>% 
   right_join(dfp) %>% arrange(rowNum) %>% relocate(ObjDetDuration,ObjectDetected)
 
 # create median smoothed speed column
@@ -200,7 +208,7 @@ dfp$SpeedDiffFromStop <- dfp$rollingSpeedMedian - dfp$SpeedAtVibStop
 # Rearrange the columns
 col_order <- c("rowNum", "day", "ParticipantID", "testID", "newTestStarts", "Range", "FOD", 
                "Scenario", "ScenarioStarts", "ScenarioBefore", "RunningScenarioCounter",                
-               "TimeStamp", "Timer", "TimeSeconds", "NewTimer", "TimeSincePreRow", "totalTime",           
+               "TimeStamp", "Timer", "TimeSeconds", "NewTimer", "TimeSincePrevRow", "totalTime",           
                "ObjectCollision", "objColl", "objcollBefore", "objCollStop",                      
                "ObjectDetected", "objDetBefore", "objDet", "ObjDetID", "objDetStop", "ObjectDistance", "ObjDetDuration", "GapObjDetID", "Gapduration",
                "VibStartTime", "VibStopTime", "TimeSinceVibStart", "TimeSinceVibStop", "SpeedDiffFromStart", "SpeedDiffFromStop",                   
