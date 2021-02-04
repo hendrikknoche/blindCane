@@ -81,16 +81,27 @@ dfp$objcollBefore <- c("", dfp[1:(nrow(dfp) - 1), ]$ObjectCollision) #shift one 
 dfp$objColl <- ifelse(substr(dfp$ObjectCollision, 1, 1) == "B" & dfp$objcollBefore == "", 1, 0)
 dfp$objCollStop <- ifelse(substr(dfp$ObjectCollision, 1, 1) == "B" & lead(dfp$ObjectCollision) == "", 1, 0)
 
+dfp %<>% 
+  dplyr::group_by(testID) %>% 
+  dplyr::mutate(ObjectCollision=gsub("null", "", ObjectCollision),
+                objCollStart = ifelse(substr(ObjectCollision, 1, 1) == "B" & dplyr::lag(ObjectCollision) == "", 1, 0),
+                objCollStop =  ifelse(substr(ObjectCollision, 1, 1) == "B" & dplyr::lead(ObjectCollision) == "", 1, 0),
+                objCollAfter = lead(ObjectCollision))%>%
+  ungroup()
+
 # count detections
 dfp$ObjectDetected <- gsub("null", "", dfp$ObjectDetected)
 dfp$objDetBefore <- c("", dfp[1:(nrow(dfp) - 1), ]$ObjectDetected) #shift one row
 dfp$objDet <- ifelse(substr(dfp$ObjectDetected, 1, 1) == "B" & dfp$objDetBefore == "" & dfp$ObjectDistance>1, 1, 0)
-dfp$objDetStop <- ifelse(substr(dfp$ObjectDetected, 1, 1) == "B" & lead(dfp$ObjectDetected) == "" & dfp$ObjectDistance>1, 1, 0)
+dfp$objDetStop <- ifelse(dfp$objDet ==1 & lead(dfp$objDet) == 0, 1, 0)
 
 #setup physical detections
 dfp$PhysDetOngoing <- ifelse(substr(dfp$ObjectDetected, 1, 1) == "B" & dfp$ObjectDistance<=1, 1, 0)
 dfp$PhysDetBefore <- c("", dfp[1:(nrow(dfp) - 1), ]$PhysDetOngoing) #shift one row
 dfp$PhysDetStart<-  ifelse(dfp$PhysDetOngoing == 1 & dfp$PhysDetBefore == 0 , 1, 0)
+dfp$PhysDetStopt<-  ifelse(dfp$PhysDetOngoing == 1 & lead(dfp$PhysDetOngoing) == 0, 1, 0)
+
+
 dfp$physDetID <- cumsum(dfp$PhysDetStart + dfp$newTestStarts)
 
 
