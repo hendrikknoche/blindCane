@@ -91,13 +91,46 @@ dfp %<>% dplyr::group_by(testID) %>%
                 objCollAfter = lead(ObjectCollision),
                 objCollInTestID=cumsum(objCollStart),
                 objCollGapInTestID=cumsum(objCollStop))%>%
-                dplyr::group_by(testID,objCollInTestID) %>%
-                dplyr::mutate(TimeSinceObjCollStart=cumsum(TimeSincePrevRow),
-                              TimeSinceObjCollStart=ifelse(objCollInTestID==0,NA,TimeSinceObjCollStart))%>%
-                dplyr::group_by(testID,objCollGapInTestID) %>%
-                dplyr::mutate(TimeSinceObjCollStop=cumsum(TimeSincePrevRow),
-                              TimeSinceObjCollStop=ifelse(objCollGapInTestID==0,NA,TimeSinceObjCollStop))%>%
-                ungroup()
+  dplyr::group_by(testID,objCollInTestID) %>%
+  dplyr::mutate(TimeSinceObjCollStart=cumsum(TimeSincePrevRow),
+                TimeSinceObjCollStart=ifelse(objCollInTestID==0,NA,TimeSinceObjCollStart))%>%
+  dplyr::group_by(testID,objCollGapInTestID) %>%
+  dplyr::mutate(TimeSinceObjCollStop=cumsum(TimeSincePrevRow),
+                TimeSinceObjCollStop=ifelse(objCollGapInTestID==0,NA,TimeSinceObjCollStop))%>%
+  ungroup()
+
+
+#setup physical detections
+dfp %<>% dplyr::group_by(testID) %>% 
+  dplyr::mutate(PhysDetOngoing = ifelse(substr(ObjectDetected, 1, 1) == "B" & ObjectDistance<=1, 1, 0),
+                PhysDetStart = ifelse(PhysDetOngoing == 1 & dplyr::lag(PhysDetOngoing) == 0 , 1, 0),
+                PhysDetStop = ifelse(PhysDetOngoing == 1 & dplyr::lead(PhysDetOngoing) == 0, 1, 0),
+                PhysDetInTestID=cumsum(PhysDetStart),
+                PhysDetGapInTestID=cumsum(PhysDetStop))%>%
+  dplyr::group_by(testID,PhysDetInTestID) %>%
+  dplyr::mutate(TimeSincePhysDetStart=cumsum(TimeSincePrevRow),
+                TimeSincePhysDetStart=ifelse(PhysDetInTestID==0,NA,TimeSincePhysDetStart))%>%
+  dplyr::group_by(testID,PhysDetGapInTestID) %>%
+  dplyr::mutate(TimeSincePhysDetStop=cumsum(TimeSincePrevRow),
+                TimeSincePhysDetStop=ifelse(PhysDetGapInTestID==0,NA,TimeSincePhysDetStop))%>%
+  ungroup()
+
+
+#setup augVibrations
+dfp %<>% dplyr::group_by(testID) %>% 
+  dplyr::mutate(AugVibOngoing = ifelse(substr(ObjectDetected, 1, 1) == "B" & ObjectDistance>1, 1, 0),
+                AugVibStart = ifelse(AugVibOngoing == 1 & dplyr::lag(AugVibOngoing) == 0 , 1, 0),
+                AugVibStop = ifelse(AugVibOngoing == 1 & dplyr::lead(AugVibOngoing) == 0, 1, 0),
+                AugVibInTestID=cumsum(AugVibStart),
+                AugVibGapInTestID=cumsum(AugVibStop))%>%
+  dplyr::group_by(testID,AugVibInTestID) %>%
+  dplyr::mutate(TimeSinceAugVibStart=cumsum(TimeSincePrevRow),
+                TimeSinceAugVibStart=ifelse(AugVibInTestID==0,NA,TimeSinceAugVibStart))%>%
+  dplyr::group_by(testID,AugVibGapInTestID) %>%
+  dplyr::mutate(TimeSinceAugVibStop=cumsum(TimeSincePrevRow),
+                TimeSinceAugVibStop=ifelse(AugVibGapInTestID==0,NA,TimeSinceAugVibStop))%>%
+  ungroup()
+
 
 # event on-going
 # event start
@@ -111,18 +144,9 @@ dfp$objDetBefore <- c("", dfp[1:(nrow(dfp) - 1), ]$ObjectDetected) #shift one ro
 dfp$objDet <- ifelse(substr(dfp$ObjectDetected, 1, 1) == "B" & dfp$objDetBefore == "" & dfp$ObjectDistance>1, 1, 0)
 dfp$objDetStop <- ifelse(dfp$objDet ==1 & lead(dfp$objDet) == 0, 1, 0)
 
-#setup physical detections
-dfp$PhysDetOngoing <- ifelse(substr(dfp$ObjectDetected, 1, 1) == "B" & dfp$ObjectDistance<=1, 1, 0)
-dfp$PhysDetBefore <- c("", dfp[1:(nrow(dfp) - 1), ]$PhysDetOngoing) #shift one row
-dfp$PhysDetStart<-  ifelse(dfp$PhysDetOngoing == 1 & dfp$PhysDetBefore == 0 , 1, 0)
-dfp$PhysDetStopt<-  ifelse(dfp$PhysDetOngoing == 1 & lead(dfp$PhysDetOngoing) == 0, 1, 0)
-
-
 dfp$physDetID <- cumsum(dfp$PhysDetStart + dfp$newTestStarts)
 
 
-
-xxxxx
 
  # create time since beginning of physical detection
 dfp %<>% 
@@ -142,6 +166,8 @@ dfp %<>%
   right_join(dfp, na_matches = "never") %>% arrange(rowNum) %>%
   dplyr::mutate(SpeedChangeFromPhysDetStart=PersonSpeed-SpeedAtPhysDetStart) 
 
+#create speed changes from AugVibstart
+#create speed changes from ObjCollStart
 
 # Keep track on when a new scenario starts
 dfp$ScenarioBefore <- lag(dfp$Scenario, default = 99999)
