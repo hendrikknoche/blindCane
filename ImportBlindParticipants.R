@@ -5,7 +5,7 @@ library(lubridate)
 library(zoo)
 library(magrittr)
 
-#------- Import and save --------
+#------- Import and save raw data --------
 
 options("digits.secs"=6)
 

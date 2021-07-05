@@ -1,6 +1,6 @@
 # Analysis 10 Participants Study ---------------------------------
 
-# Initialize the libraries
+#----- Initialize the libraries -----
 library(readbulk)
 library(lubridate)
 library(ggplot2)
@@ -28,17 +28,44 @@ library(zoo)
 library(afex)
 library(emmeans)
 
-# GetData
+#----- GetData -----
 load("data_Participants_All.rda")
 load("data_Participants_SumTestID.rda")
 
-## The effect of vibration alerts ---------
-# Change in Rolling Median based on FODs when vibration starts
+#----- Data Overview: Detection Distance -----
 dfp %>%
-  filter(TimeSinceVibStart < 4 & TimeSinceVibStart > 0) %>%
+  filter(ObjectDistance > 0) %>%
+  ggplot(aes(x=ObjectDistance, color = factor(FOD))) + 
+  geom_density() +
+  theme_bw() +
+  ylab("Density") +
+  xlab("Alert Distance") +
+  #facet_grid(rows = vars(FOD))+
+  theme(legend.position="bottom", 
+        axis.text.x = element_text(size = 14), 
+        axis.text.y = element_text(size = 14), 
+        axis.title = element_text(size = 14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 14),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "black")) +
+  scale_color_discrete("") +
+  scale_shape_discrete("")
+
+#----- Statistical analysis of data -----
+
+#Put statistics here
+
+#----- Plot Alert -----
+
+#----- Plot Alert: Total -----
+dfp %>%
+  filter(TimeSinceObjDetStart < 4 & TimeSinceObjDetStart > 0) %>%
   ggplot(aes(
-    x = TimeSinceVibStart,
-    y = SpeedDiffFromStart
+    x = TimeSinceObjDetStart,
+    y = rollingSpeedMedian
   )) +
   geom_smooth() +
   ylab("Change in Walking Speed") +
@@ -51,29 +78,33 @@ dfp %>%
   scale_color_discrete("FOA") +
   scale_shape_discrete("FOA")
 
+#----- Plot Alert: Per AWC (cleaned for paper) -----
 dfp %>%
-  filter(TimeSinceVibStart < 5 & TimeSinceVibStart > 0) %>%
+  filter(TimeSinceObjDetStart < 5 & TimeSinceObjDetStart > 0) %>%
   ggplot(aes(
-    x = TimeSinceVibStart,
-    y = SpeedDiffFromStart,
+    x = TimeSinceObjDetStart,
+    y = rollingSpeedMedian,
     colour = FOD
   )) +
-  geom_smooth() +
-  ylab("Change in Walking Speed") +
-  xlab("Time Since Alert") +
-  theme_bw()+
+  geom_smooth(se = F) +
+  theme_bw() +
+  ylab("Change in Walking Speed From Alert Onset (m/s)") +
+  xlab("Time Since Alert Onset (seconds)") +
   theme(legend.position="bottom", 
         axis.text.x = element_text(size = 14), 
         axis.text.y = element_text(size = 14), 
-        axis.title = element_text(size = 14)) +
-  scale_color_discrete("FOA") +
-  scale_shape_discrete("FOA")
+        axis.title = element_text(size = 14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 14)) +
+  scale_color_discrete("") +
+  scale_shape_discrete("")
 
+#----- Plot Alert: Per AWC and Range -----
 dfp %>%
-  filter(TimeSinceVibStart < 5 & TimeSinceVibStart > 0) %>%
+  filter(TimeSinceObjDetStart < 5 & TimeSinceObjDetStart > 0) %>%
   ggplot(aes(
-    x = TimeSinceVibStart,
-    y = SpeedDiffFromStart,
+    x = TimeSinceObjDetStart,
+    y = rollingSpeedMedian,
     colour = FOD
   )) +
   geom_smooth() +
@@ -88,19 +119,19 @@ dfp %>%
   scale_color_discrete("FOA") +
   scale_shape_discrete("FOA")
 
+#----- Plot Alert: Per Range (cleaned for paper) -----
 dfp %>%
-  filter(TimeSinceVibStart < 5 & TimeSinceVibStart > 0 & !is.na(TimeSinceVibStart)) %>%
+  filter(TimeSinceObjDetStart < 5 & TimeSinceObjDetStart > 0 & !is.na(TimeSinceObjDetStart)) %>%
   ggplot(aes(
-    x = TimeSinceVibStart,
-    y = SpeedDiffFromStart,
+    x = TimeSinceObjDetStart,
+    y = rollingSpeedMedian,
     colour = factor(Range)
   )) +
-  geom_hline(yintercept=0) +
+  #geom_hline(yintercept=0) +
   geom_smooth(se = F) +
   theme_bw() +
   ylab("Change in Walking Speed From Alert Onset (m/s)") +
   xlab("Time Since Alert Onset (seconds)") +
-  #facet_grid(rows = vars(FOD))+
   theme(legend.position="bottom", 
         axis.text.x = element_text(size = 14), 
         axis.text.y = element_text(size = 14), 
@@ -110,11 +141,12 @@ dfp %>%
   scale_color_discrete("") +
   scale_shape_discrete("")
 
+#----- Plot Alert: All participants (Not Working) -----
 dfp %>%
-  filter(TimeSinceVibStart < 4 & TimeSinceVibStart > 0 & !is.na(TimeSinceVibStart)) %>%
+  filter(TimeSinceObjDetStart < 4 & TimeSinceObjDetStart > 0) %>%
   ggplot(aes(
-    x = TimeSinceVibStart,
-    y = SpeedDiffFromStart
+    x = TimeSinceObjDetStart,
+    y = rollingSpeedMedian
   )) +
   geom_smooth(aes(
     shape = factor(ParticipantID)
@@ -129,7 +161,7 @@ dfp %>%
   coord_cartesian(ylim = c(-0.08,0.08)) +
   theme_bw() +
   ylab("Change in Walking Speed From Alert Onset (m/s)") +
-  xlab("Time Since Alert Onset") +
+  xlab("Time Since Alert Onset (seconds)") +
   theme(legend.position="bottom", 
         axis.text.x = element_text(size = 14), 
         axis.text.y = element_text(size = 14), 
@@ -138,10 +170,10 @@ dfp %>%
 #scale_shape_discrete("FOA") 
 
 dfp %>%
-  filter(TimeSinceVibStart < 4 & TimeSinceVibStart > 0 & ParticipantID != 2 & ParticipantID != 9 & ParticipantID != 10) %>%
+  filter(TimeSinceObjDetStart < 4 & TimeSinceObjDetStart > 0 & ParticipantID != 2 & ParticipantID != 9 & ParticipantID != 10) %>%
   ggplot(aes(
-    x = TimeSinceVibStart,
-    y = SpeedDiffFromStart
+    x = TimeSinceObjDetStart,
+    y = rollingSpeedMedian
   )) +
   geom_smooth(aes(
                   shape = factor(ParticipantID)
@@ -153,13 +185,73 @@ dfp %>%
   geom_smooth(se = FALSE) +
   theme_bw() +
   ylab("Change in Walking Speed (m/s)") +
-  xlab("Time Since Alert") +
+  xlab("Time Since Alert Onset (seconds)") +
   theme(legend.position="bottom", 
         axis.text.x = element_text(size = 14), 
         axis.text.y = element_text(size = 14), 
         axis.title = element_text(size = 14)) #+
   #scale_color_discrete("FOA") +
   #scale_shape_discrete("FOA") 
+
+#----- Plot Alert: Phys vs Aug (cleaned for paper) -----
+
+dfp %>% 
+  filter(TimeSincePhysDetStart < 5 & TimeSincePhysDetStart > 0 & TimeSinceAugDetStart < 5 & TimeSinceAugDetStart > 0) %>%
+  ggplot() +
+  #geom_hline(yintercept=0, linetype = "dashed") +
+  geom_smooth(aes(
+    x = TimeSincePhysDetStart,
+    y = rollingSpeedMedian,
+    #linetype = factor(day),
+    color = 'PhysicalAlerts'), 
+    se = F) +
+  geom_smooth(aes(
+    x = TimeSinceAugDetStart, 
+    y = rollingSpeedMedian, 
+    #linetype = factor(day),
+    color = "AugmentedAlerts"), 
+    se = F) +
+  #geom_smooth(data = augDetDataTW, aes(x = TimeSinceVibStart, y = SpeedDiffFromStart), color = "#D16103", se = F) +
+  #geom_smooth(data = augDetDataCW, aes(x = TimeSinceVibStart, y = SpeedDiffFromStart), color = "#52854C", se = F) +
+  theme_bw() +
+  ylab("Cehange in Walking Speed From Alert Onset (m/s)") +
+  xlab("Time Since Alert Onset (seconds)") +
+  #facet_grid(rows = vars(FOD))+
+  theme(legend.position="bottom", 
+        axis.text.x = element_text(size = 14), 
+        axis.text.y = element_text(size = 14), 
+        axis.title = element_text(size = 14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 14),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "black")) #+
+  #scale_fill_identity(guide = 'legend') +
+  #scale_colour_manual(name = NULL,
+  #                    values =c('PhysicalAlerts'='#00AFBB','AugmentedAlerts'='#D16103'), 
+  #                    labels = c('Augmented Alerts','Physical Alerts')) #+
+#scale_color_discrete("") +
+#scale_shape_discrete("")
+
+#----- Percentage of Alert: Reduce walking speed -----
+
+SpeedAtDetStart
+
+dfp %>%
+  filter(TimeSinceObjDetStart < 0.51 & TimeSinceObjDetStart > 0.5) %>%
+  ggplot(aes(
+    x = TimeSinceObjDetStart,
+    y = rollingSpeedMedian
+  ))
+
+
+
+
+
+
+
+
 
 ## New analysis
 
@@ -1581,11 +1673,11 @@ mean(onsets$SpeedAtVibStart, trim = 0, na.rm = TRUE)
 mean(offsets$SpeedAtVibStop, trim = 0, na.rm = TRUE)
 
 
-dfv$TimeSinceVibStart <- dfv$RunningTime - dfv$VibStartTime
+dfv$TimeSinceObjDetStart <- dfv$RunningTime - dfv$VibStartTime
 dfv$TimeSinceVibStop <- dfv$RunningTime - dfv$VibStopTime
 
 
-dfv$SpeedDiffFromStart <- dfv$rollingSpeedMedian - dfv$SpeedAtVibStart
+dfv$SpeedChangeFromDetStart <- dfv$rollingSpeedMedian - dfv$SpeedAtVibStart
 dfv$SpeedDiffFromStop <- dfv$rollingSpeedMedian - dfv$SpeedAtVibStop
 
 
@@ -1593,9 +1685,9 @@ dfp$ObjDetChangeHlp <- lag(dfp$Object_detected)
 
 
 dfv %>%
-  filter(TimeSinceVibStart < 2.5 & TimeSinceVibStart > 0) %>%
+  filter(TimeSinceObjDetStart < 2.5 & TimeSinceObjDetStart > 0) %>%
   ggplot(aes(
-    x = TimeSinceVibStart,
+    x = TimeSinceObjDetStart,
     y = rollingSpeedMedian
   )) +
   geom_line(alpha = .04) +
@@ -1604,9 +1696,9 @@ dfv %>%
 
 
 dfv %>%
-  filter(TimeSinceVibStart < 2.5 & TimeSinceVibStart > 0) %>%
+  filter(TimeSinceObjDetStart < 2.5 & TimeSinceObjDetStart > 0) %>%
   ggplot(aes(
-    x = TimeSinceVibStart,
+    x = TimeSinceObjDetStart,
     y = rollingSpeedMedian
   )) +
   geom_point(
@@ -1619,10 +1711,10 @@ dfv %>%
 
 
 dfv %>%
-  filter(TimeSinceVibStart < 2.5 & TimeSinceVibStart > 0) %>%
+  filter(TimeSinceObjDetStart < 2.5 & TimeSinceObjDetStart > 0) %>%
   ggplot(aes(
-    x = TimeSinceVibStart,
-    y = SpeedDiffFromStart
+    x = TimeSinceObjDetStart,
+    y = SpeedChangeFromDetStart
   )) +
   geom_point(
     alpha = .1,
@@ -1634,10 +1726,10 @@ dfv %>%
 
 
 dfv %>%
-  filter(TimeSinceVibStart < 2.5 & TimeSinceVibStart > 0) %>%
+  filter(TimeSinceObjDetStart < 2.5 & TimeSinceObjDetStart > 0) %>%
   ggplot(aes(
-    x = TimeSinceVibStart,
-    y = SpeedDiffFromStart,
+    x = TimeSinceObjDetStart,
+    y = SpeedChangeFromDetStart,
     colour = FOD
   )) +
   geom_smooth() +
@@ -1645,9 +1737,9 @@ dfv %>%
 
 
 dfv %>%
-  filter(TimeSinceVibStart < 2.5 & TimeSinceVibStart > 0) %>%
+  filter(TimeSinceObjDetStart < 2.5 & TimeSinceObjDetStart > 0) %>%
   ggplot(aes(
-    x = TimeSinceVibStart,
+    x = TimeSinceObjDetStart,
     y = rollingSpeedMedian,
     colour = FOD
   )) +
@@ -1657,9 +1749,9 @@ dfv %>%
 
 
 dfv %>%
-  filter(TimeSinceVibStart < 2 & TimeSinceVibStart > 0) %>%
+  filter(TimeSinceObjDetStart < 2 & TimeSinceObjDetStart > 0) %>%
   ggplot(aes(
-    x = TimeSinceVibStart,
+    x = TimeSinceObjDetStart,
     y = rollingSpeedMedian,
     colour = FOD
   )) +
@@ -1669,9 +1761,9 @@ dfv %>%
 
 
 dfv %>%
-  filter(TimeSinceVibStart < 2.5 & TimeSinceVibStart > 0) %>%
+  filter(TimeSinceObjDetStart < 2.5 & TimeSinceObjDetStart > 0) %>%
   ggplot(aes(
-    x = TimeSinceVibStart,
+    x = TimeSinceObjDetStart,
     y = rollingSpeedMedian,
     colour = factor(day)
   )) +
@@ -1681,9 +1773,9 @@ dfv %>%
 
 
 dfv %>%
-  filter(TimeSinceVibStart < 2.5 & TimeSinceVibStart > 0) %>%
+  filter(TimeSinceObjDetStart < 2.5 & TimeSinceObjDetStart > 0) %>%
   ggplot(aes(
-    x = TimeSinceVibStart,
+    x = TimeSinceObjDetStart,
     y = rollingSpeedMedian,
     colour = FOD
   )) +
@@ -1724,11 +1816,11 @@ dm <- data.frame(
 )
 
 dfv %>%
-  filter(TimeSinceVibStart < 2.5 & TimeSinceVibStart > 0) %>%
+  filter(TimeSinceObjDetStart < 2.5 & TimeSinceObjDetStart > 0) %>%
   ggplot(
     data = dfv,
     aes(
-      x = TimeSinceVibStart,
+      x = TimeSinceObjDetStart,
       y = rollingSpeedMedian,
       colour = FOD
     )
@@ -1785,7 +1877,7 @@ Yes
 #  select(-number)
 # dfp <- merge(dfp, PIDTrialID)
 
-plot(density(dfp$TimeSinceVibStart))
+plot(density(dfp$TimeSinceObjDetStart))
 plot(density(dfp$TimeSinceVibStop))
 
 # analysis on how detections affect speed
@@ -1810,9 +1902,9 @@ mean(onsets$SpeedAtVibStart, trim = 0, na.rm = TRUE)
 mean(offsets$SpeedAtVibStop, trim = 0, na.rm = TRUE)
 
 
-dfp$TimeSinceVibStart <- dfp$RunningTime - dfp$VibStartTime
+dfp$TimeSinceObjDetStart <- dfp$RunningTime - dfp$VibStartTime
 dfp$TimeSinceVibStop <- dfp$RunningTime - dfp$VibStopTime
 
 
-dfp$SpeedDiffFromStart <- dfp$rollingSpeedMedian - dfp$SpeedAtVibStart
+dfp$SpeedChangeFromDetStart <- dfp$rollingSpeedMedian - dfp$SpeedAtVibStart
 dfp$SpeedDiffFromStop <- dfp$rollingSpeedMedian - dfp$SpeedAtVibStop
