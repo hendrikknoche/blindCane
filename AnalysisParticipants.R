@@ -9,7 +9,8 @@ library(magrittr)
 library(Rmisc)
 library("car")
 library(lme4)
-library("ggpubr")
+library(MuMIn)
+library("ggpubr") 
 
 # not sure if we use these libraries
 # library(ggpubr)
@@ -62,6 +63,14 @@ dfp %>%
   scale_shape_discrete("")
 
 #----- Data Overview: Detection Duration -----
+
+meanAlertDuration <- dfpSumTestID %>%
+  filter(ObjDetDuration > 0.01) %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::summarise(mean(ObjDetDuration),
+                   sd(ObjDetDuration))
+
+meanAvgWalkingSpeed
 
 # Density plot of the alert duration for each FOD.
 dfp %>%
@@ -134,6 +143,83 @@ ggplot(dfpSumTestID, aes(x=factor(ParticipantID), y=avgSpeed)) +
   scale_color_discrete("") +
   scale_shape_discrete("")
 
+ggplot(dfpSumTestID, aes(x = objectDetected, y = avgSpeed)) + 
+  geom_point(colour = "darkgray") +
+  geom_smooth(se = F) +  
+  #  geom_smooth(method = 'lm', se = F, aes(group = 1)) + 
+  theme_bw()  +
+  ylab("Average Walking Speed (m/s)") +
+  xlab("Number of Alers per Run") +
+  # facet_grid(rows = vars(FOD))+
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 14),
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 14),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black")
+  ) +
+  scale_color_discrete("") +
+  scale_shape_discrete("")
+
+dfpSumTestID <- dfpSumTestID %>%
+  mutate(ParticipantID = as.factor(ParticipantID))
+
+ggplot(dfpSumTestID, aes(x = objectDetected, y = log(avgSpeed), col = ParticipantID)) + 
+  geom_point() +
+  geom_smooth(aes(group = ParticipantID), method = 'lm', se = F) + 
+  theme_bw()  +
+  ylab("Log-transformed Average Walking Speed (m/s)") +
+  xlab("Number of Alers per Run") +
+  # facet_grid(rows = vars(FOD))+
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 14),
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 14),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black")
+  ) +
+  scale_color_discrete("") +
+  scale_shape_discrete("")
+
+dfpSumTestID <- dfpSumTestID %>%
+  mutate(RunNumber = as.factor(RunNumber))
+
+ggplot(dfpSumTestID, aes(x = objectDetected, y = log(avgSpeed), col = RunNumber)) + 
+  geom_point() +
+  #geom_smooth(aes(group = ParticipantID), method = 'lm', se = F) + 
+  geom_smooth(aes(group = RunNumber), method = 'lm', se = F) +
+  #  geom_smooth(method = 'lm', se = F, aes(group = 1)) + 
+  theme_bw()  +
+  ylab("Log-transformed Average Walking Speed (m/s)") +
+  xlab("Number of Alers per Run") +
+  # facet_grid(rows = vars(FOD))+
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 14),
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 14),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black")
+  ) +
+  scale_color_discrete("") +
+  scale_shape_discrete("")
+
+
+
 #----- Data Overview: Variance between Run Number -----
 ggplot(dfpSumTestID, aes(x=factor(RunNumber), y=avgSpeed)) + 
   geom_boxplot() +
@@ -184,13 +270,182 @@ ggplot(dfpSumTestID, aes(x=RunNumber, y=avgSpeed)) +
 mean(dfpSumTestID$objectDetected)
 sd(dfpSumTestID$objectDetected)
 
+summary(lm(objectDetected ~ FOD, data = dfpSumTestID)) 
+
 # Calculate the mean of number of physical Detections per run
 mean(dfpSumTestID$physObjectDetected)
 sd(dfpSumTestID$physObjectDetected)
 
+summary(lm(physObjectDetected ~ FOD, data = dfpSumTestID)) 
+
 # Calculate the mean of number of augmented Detections per run
 mean(dfpSumTestID$augObjectDetected)
 sd(dfpSumTestID$augObjectDetected)
+
+meanAlerts <- dfpSumTestID %>%
+  dplyr::group_by(FOD, Range) %>%
+  dplyr::summarise(mean(avgSpeed),
+                   mean(objectDetected),
+                   #sd(objectDetected),
+                   mean(physObjectDetected),
+                   #sd(physObjectDetected),
+                   mean(augObjectDetected),
+                   #sd(augObjectDetected)
+                   )
+
+meanAlerts
+
+# Linear Regression to check significant 
+summary(lm(objectDetected ~ FOD, data = dfpSumTestID)) 
+
+# Make functions
+lower_ci <- function(mean, se, n, conf_level = 0.95){
+  lower_ci <- mean - qt(1 - ((1 - conf_level) / 2), n - 1) * se
+}
+upper_ci <- function(mean, se, n, conf_level = 0.95){
+  upper_ci <- mean + qt(1 - ((1 - conf_level) / 2), n - 1) * se
+}
+
+#Plot walking speed per condition
+dfpdaggAlert <- dfpSumTestID %>%
+  dplyr::group_by(Range, FOD) %>%
+  dplyr::summarise(newObjectDetected = mean(objectDetected),
+                   smean = mean(objectDetected, na.rm = TRUE),
+                   ssd = sd(objectDetected, na.rm = TRUE),
+                   count = n()) %>%
+  dplyr::mutate(
+    se = ssd / sqrt(count),
+    lowerci = lower_ci(smean, se, count),
+    upperci = upper_ci(smean, se, count))
+
+ggplot(data = dfpdaggAlert, aes(x = Range, 
+                                     y = newObjectDetected, 
+                                     group = FOD, 
+                                     color = FOD,
+                                     shape = FOD)) +
+  geom_point(position = position_dodge(0.1), alpha=1, size = 5) +
+  geom_line(position = position_dodge(0.1), 
+            alpha = 1, 
+            size = 1) +
+  geom_errorbar(aes(ymin = lowerci, 
+                    ymax = upperci), 
+                width = 0.2, 
+                color = "Black", 
+                position = position_dodge(0.1)) +
+  scale_fill_hue(name="Condition", 
+                 labels=c("White Cane", 
+                          "Body-preview aEMA", 
+                          "Normal aEMA"))+
+  #ggtitle("Number of Objects Detected per Range and Condition")+
+  ylab("Average Number of Alerts") +
+  xlab("Preview Range in Meter") +
+  scale_y_continuous()+
+  theme_bw() +
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 14),
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 14),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black")
+  ) +
+  scale_color_discrete("") +
+  scale_shape_discrete("") 
+
+#----- Mean: Alerts per obstacle -----
+
+test2 <- dfp %>%
+  dplyr::filter(newTestStarts == 1) %>%
+  #dplyr::group_by(testID, FOD, Range, Scenario) %>%
+  dplyr::count(Scenario)
+
+test2 #Fuck... someone fucked up during the test
+
+test <- dfp %>%
+  dplyr::filter(objDetStart == 1) %>%
+  dplyr::group_by(testID, FOD, Range) %>%
+  dplyr::count(ObjectDetected) %>%
+  dplyr::rename(NumberOfAlerts = n)
+
+test
+
+moreTest <- test %>%
+  dplyr::group_by(testID, FOD, Range) %>%
+  dplyr::summarise(NumberOfObjDet = n(),
+                   avgNumberOfAlerts = mean(NumberOfAlerts))
+
+moreTest
+
+summary(lm(NumberOfObjDet ~ FOD, data = moreTest)) 
+
+MeansTest <- moreTest %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::summarise(avgNumberOfObjDet = mean(NumberOfObjDet),
+                   sdNumberOfObjDet = sd(NumberOfObjDet),
+                   sdNumberOfAlerts = sd(avgNumberOfAlerts),
+                   avgNumberOfAlerts = mean(avgNumberOfAlerts))
+
+MeansTest
+
+#----- Mean: Physical Alerts per obstacle -----
+
+test <- dfp %>%
+  dplyr::filter(PhysDetStart == 1) %>%
+  dplyr::group_by(testID, FOD, Range) %>%
+  dplyr::count(ObjectDetected) %>%
+  dplyr::rename(NumberOfAlerts = n)
+
+test
+
+moreTest <- test %>%
+  dplyr::group_by(testID, FOD, Range) %>%
+  dplyr::summarise(NumberOfObjDet = n(),
+                   avgNumberOfAlerts = mean(NumberOfAlerts))
+
+moreTest
+
+summary(lm(NumberOfObjDet ~ FOD, data = moreTest)) 
+
+MeansTest <- moreTest %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::summarise(avgNumberOfObjDet = mean(NumberOfObjDet),
+                   sdNumberOfObjDet = sd(NumberOfObjDet),
+                   NumberOfAlerts = mean(avgNumberOfAlerts),
+                   sdNumberOfAlerts = sd(avgNumberOfAlerts))
+
+MeansTest
+
+#----- Mean: Augmented Alerts per obstacle -----
+
+test <- dfp %>%
+  dplyr::filter(AugDetStart == 1) %>%
+  dplyr::group_by(testID, FOD, Range) %>%
+  dplyr::count(ObjectDetected) %>%
+  dplyr::rename(NumberOfAlerts = n)
+
+test
+
+moreTest <- test %>%
+  dplyr::group_by(testID, FOD, Range) %>%
+  dplyr::summarise(NumberOfObjDet = n(),
+                   avgNumberOfAlerts = mean(NumberOfAlerts))
+
+moreTest
+
+summary(lm(NumberOfObjDet ~ FOD, data = moreTest)) 
+
+MeansTest <- moreTest %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::summarise(avgNumberOfObjDet = mean(NumberOfObjDet),
+                   sdNumberOfObjDet = sd(NumberOfObjDet),
+                   NumberOfAlerts = mean(avgNumberOfAlerts),
+                   sdNumberOfAlerts = sd(avgNumberOfAlerts))
+
+MeansTest
 
 #----- Mean: Walking speed -----
 
@@ -198,32 +453,212 @@ sd(dfpSumTestID$augObjectDetected)
 mean(dfpSumTestID$avgSpeed)
 sd(dfpSumTestID$avgSpeed)
 
+meanAvgWalkingSpeed <- dfpSumTestID %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::summarise(mean(avgSpeed),
+                   sd(avgSpeed))
+
+meanAvgWalkingSpeed
+
+# Linear Regression to check significant 
+summary(lm(avgSpeed ~ FOD, data = dfpSumTestID)) 
+
+summary(lm(log(avgSpeed) ~ objectDetected, data = dfpSumTestID)) 
+
+summary(lm(log(avgSpeed) ~ FOD*Range, data = dfpSumTestID)) 
+
+TunnelWalkingSpeed <- dfpSumTestID[!(dfpSumTestID$FOD=="Conical View AWC"),]
+summary(lm(log(avgSpeed) ~ FOD*Range, data = TunnelWalkingSpeed)) 
+
+ConicalWalkingSpeed <- dfpSumTestID[!(dfpSumTestID$FOD=="Tunnel View AWC"),]
+summary(lm(log(avgSpeed) ~ FOD*Range, data = ConicalWalkingSpeed)) 
+
+# Make functions
+lower_ci <- function(mean, se, n, conf_level = 0.95){
+  lower_ci <- mean - qt(1 - ((1 - conf_level) / 2), n - 1) * se
+}
+upper_ci <- function(mean, se, n, conf_level = 0.95){
+  upper_ci <- mean + qt(1 - ((1 - conf_level) / 2), n - 1) * se
+}
+
+#Plot walking speed per condition
+dfpdaggSpeedTrain <- dfpSumTestID %>%
+  dplyr::group_by(Range, FOD) %>%
+  dplyr::summarise(newAvgSpeed = mean(avgSpeed),
+            smean = mean(avgSpeed, na.rm = TRUE),
+            ssd = sd(avgSpeed, na.rm = TRUE),
+            count = n()) %>%
+  dplyr::mutate(
+    se = ssd / sqrt(count),
+    lowerci = lower_ci(smean, se, count),
+    upperci = upper_ci(smean, se, count))
+
+ggplot(data = dfpdaggSpeedTrain, aes(x = Range, 
+                                  y = newAvgSpeed, 
+                                  group = FOD, 
+                                  color = FOD,
+                                  shape = FOD)) +
+  geom_point(position = position_dodge(0.1), alpha=1, size = 5) +
+  geom_line(position = position_dodge(0.1), 
+            alpha = 1, 
+            size = 1) +
+  geom_errorbar(aes(ymin = lowerci, 
+                    ymax = upperci), 
+                width = 0.2, 
+                color = "Black", 
+                position = position_dodge(0.1)) +
+  scale_fill_hue(name="Condition", 
+                 labels=c("White Cane", 
+                          "Body-preview aEMA", 
+                          "Normal aEMA"))+
+  #ggtitle("Number of Objects Detected per Range and Condition")+
+  ylab("Average Walking Speed") +
+  xlab("Preview Range in Meter") +
+  scale_y_continuous()+
+  theme_bw() +
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 14),
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 14),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black")
+  ) +
+  scale_color_discrete("") +
+  scale_shape_discrete("")
+  scale_color_discrete("") +
+  scale_shape_discrete("")
+
+
 #----- Mean: Collisions -----
 
 mean(dfpSumTestID$objectCollisions)
 sd(dfpSumTestID$objectCollisions)
 
+
+summary(lm(objectCollisions ~ objectDetected*FOD, data = dfpSumTestID)) 
+
 #----- Transforming Data and testing for normality -----
 
 ### Check if logging the data will have any effect on the data
 
+#_______________________________________________________________________________________________________
+## Data before any transformation
+#_______________________________________________________________________________________________________
+
 # How is the data if we just add a linear function
-summary(lm(avgSpeed ~ objectDetected, data = dfpSumTestID)) # R-squared:  0.20
+summary(lm(avgSpeed ~ objectDetected, data = dfpSumTestID)) 
+# R-squared:  0.20
 
-# How is the data if we make a log transformation on the walking speed. Making it Exponential function
-summary(lm(log(avgSpeed) ~ objectDetected, data = dfpSumTestID)) # R-squared:  0.27
+ggplot(dfpSumTestID, aes(x = objectDetected, y = avgSpeed)) + 
+  geom_point(colour = 'gray') +
+  geom_smooth(se=FALSE) +
+  theme_bw() +
+  ylab("Average Walking Speed (m/s)") +
+  xlab("Scenario") +
+  # facet_grid(rows = vars(FOD))+
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 14),
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 14),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black")
+  ) +
+  scale_color_discrete("") +
+  scale_shape_discrete("")
 
-# How is the data if we make a log transformation on the walking speed and alerts. Making it a power function 
-summary(lm(log(avgSpeed) ~ log(objectDetected+1), data = dfpSumTestID)) #R-squared:  0.25
+### Linear power function
 
-### Summary : Based on the above comparison logging the walking speed seems to be the best fit
+# Finding the residuals - linear power function
+lm <- lm(avgSpeed ~ objectDetected, data = dfpSumTestID)
+
+lmResiduals <- resid(lm)
+
+# Plot the residuals - should (ish) have the same amount above and below the line without any clear pattern
+plot(dfpSumTestID$objectDetected, lmResiduals) + abline(0,0) # Could be a lot better the bottom of the line is ot heavy
+
+# Test the Residuals on a qqplot to look for normality
+qqPlot(lmResiduals) # Does not look too good the end is off
+
+# Test for normality
+shapiro.test(lmResiduals) # not good - data does not look normally distributed
+
+### Summery : Data does not look normally distributed R2 = 0.20
 
 # /////////////////////////////////////////////////////////////////////////////////////////////////
 
-# Finding the residuals - Linear Exponential function
+# mixed linear Power function
+
+# Finding the residuals mixed Power function
+WalkingSpeed <- lmer(avgSpeed ~ objectDetected + 
+                             (1 + objectDetected | ParticipantID) +
+                             (1 + objectDetected | RunNumber) +
+                             (1 + objectDetected | Scenario),
+                           data = dfpSumTestID, REML = FALSE
+)
+
+r.squaredGLMM(WalkingSpeed) 
+# marginal R squared = 0.15 (fixed effects),
+# conditional R squared = 0.84 (fixed effects plus random effects)
+
+WalkingSpeed.Residuals <- resid(WalkingSpeed)
+
+# Plot the residuals - should (ish) have the same amount above and below the line without any clear pattern
+plot(dfpSumTestID$objectDetected, WalkingSpeed.Residuals) + abline(0,0) # looks okay, a bit too compact in the start
+
+# Test the Residuals on a qqplot to look for normality
+qqPlot(WalkingSpeed.Residuals) # not too good - jumps off towards each end 
+
+# Test for normality
+shapiro.test(WalkingSpeed.Residuals) # not too good - data should not be normal distributed
+
+# Looks normally distributed but very low R2 especially for the mixed model
+
+
+#_______________________________________________________________________________________________________
+## Data after logging speed
+#_______________________________________________________________________________________________________
+
+# How is the data if we make a log transformation on the walking speed. Making it Exponential function
+summary(lm(log(avgSpeed) ~ objectDetected, data = dfpSumTestID)) 
+# R-squared:  0.27
+
+ggplot(dfpSumTestID, aes(x = objectDetected, y = log(avgSpeed))) + 
+  geom_point(colour = 'gray') +
+  geom_smooth(se=FALSE) +
+  theme_bw() +
+  ylab("Average Walking Speed (m/s)") +
+  xlab("Scenario") +
+  # facet_grid(rows = vars(FOD))+
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 14),
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 14),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black")
+  ) +
+  scale_color_discrete("") +
+  scale_shape_discrete("")
+
+# Making the Linear Exponential function
 lmExponential <- lm(log(avgSpeed) ~ objectDetected, data = dfpSumTestID)
 
-lmExponentialResiduals <- resid(lmExponential)
+# Finding the residuals
+lmExponentialResiduals <- resid(lmExponential) 
 
 # Plot the residuals - should (ish) have the same amount above and below the line without any clear pattern
 plot(log(dfpSumTestID$objectDetected+1), lmExponentialResiduals) + abline(0,0) # looks good
@@ -234,20 +669,24 @@ qqPlot(lmExponentialResiduals) # looks good - a bit towards the end
 # Test for normality
 shapiro.test(lmExponentialResiduals) # close to not be rejected so not too good not too bad
 
-### Summery : A logged linear function is close to normally distributed
-
-# /////////////////////////////////////////////////////////////////////////////////////////////////
+### Summery : A logged linear function is close to normally distributed R2 = 0.27
 
 # Mixed Exponential function
 
 # Finding the residuals - Mixed Exponential function
 WalkingSpeed.Exponential <- lmer(log(avgSpeed) ~ objectDetected + 
-                                        (1 + objectDetected | ParticipantID) +
-                                        (1 + objectDetected | RunNumber),
-                                      data = dfpSumTestID, REML = FALSE
-                                      )
+                                   (1 + objectDetected | ParticipantID) +
+                                   (1 + objectDetected | RunNumber),
+                                 data = dfpSumTestID, REML = FALSE
+)
 
-WalkingSpeed.Exponential.Residuals <- resid(WalkingSpeed.Exponential)
+# Calculating the R2
+r.squaredGLMM(WalkingSpeed.Exponential)
+# marginal R squared = 0.21 (fixed effects),
+# conditional R squared = 0.79 (fixed effects plus random effects)
+
+# Finding the residuals
+WalkingSpeed.Exponential.Residuals <- resid(WalkingSpeed.Exponential) 
 
 # Plot the residuals - should (ish) have the same amount above and below the line without any clear pattern
 plot(log(dfpSumTestID$objectDetected+1), WalkingSpeed.Exponential.Residuals) + abline(0,0) # looks good
@@ -258,9 +697,39 @@ qqPlot(WalkingSpeed.Exponential.Residuals) # looks good - a bit towards the end
 # Test for normality
 shapiro.test(WalkingSpeed.Exponential.Residuals) # Very good - data should be normal distributed
 
-### Summery : A logged mixed linear function should be normally distributed
+### Summery: A logged mixed linear function should be normally distributed R2 = 0.21
 
-# /////////////////////////////////////////////////////////////////////////////////////////////////
+
+#_______________________________________________________________________________________________________
+## Data after logging speed and object detections
+#_______________________________________________________________________________________________________
+
+# How is the data if we make a log transformation on the walking speed and alerts. Making it a power function 
+summary(lm(log(avgSpeed) ~ log(objectDetected+1), data = dfpSumTestID)) 
+#R-squared:  0.25
+
+ggplot(dfpSumTestID, aes(x = log(objectDetected), y = log(avgSpeed))) + 
+  geom_point(colour = 'gray') +
+  geom_smooth(se=FALSE) +
+  theme_bw() +
+  ylab("Average Walking Speed (m/s)") +
+  xlab("Scenario") +
+  # facet_grid(rows = vars(FOD))+
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 14),
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 14),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black")
+  ) +
+  scale_color_discrete("") +
+  scale_shape_discrete("")
+### Summary : Based on the above comparison logging the walking speed seems to be the best fit
 
 ### Linear power function
 
@@ -278,9 +747,7 @@ qqPlot(lmPowerResiduals) # Does not look too good the end is off
 # Test for normality
 shapiro.test(lmPowerResiduals) # not good - data does not look normally distributed
 
-### Summery : A Linear power function is not a good transformation of the data.
-
-# /////////////////////////////////////////////////////////////////////////////////////////////////
+### Summery : A Linear power function is not a good transformation of the data. R2 = 0.25
 
 # mixed linear Power function
 
@@ -291,6 +758,10 @@ WalkingSpeed.Power <- lmer(log(avgSpeed) ~ log(objectDetected+1) +
                                     (1 + log(1 + objectDetected) | Scenario),
                                   data = dfpSumTestID, REML = FALSE
 )
+
+r.squaredGLMM(WalkingSpeed.Power) 
+# marginal R squared = 0.11 (fixed effects),
+# conditional R squared = 0.84 (fixed effects plus random effects)
 
 WalkingSpeed.Power.Residuals <- resid(WalkingSpeed.Power)
 
@@ -303,6 +774,12 @@ qqPlot(WalkingSpeed.Power.Residuals) # looks good - a bit towards each end
 # Test for normality
 shapiro.test(WalkingSpeed.Power.Residuals) # Very good - data should be normal distributed
 
+# Looks normally distributed but very low R2 espacally for the mixed model
+
+#_______________________________________________________________________________________________________
+## Conclusion
+#_______________________________________________________________________________________________________
+
 ### After testing four different transformation the Mixed Linear Function (Exponential only one log) seemst to explain the data the most
 
 #----- LMEM: Walking Speed vs alerts -----
@@ -310,8 +787,9 @@ shapiro.test(WalkingSpeed.Power.Residuals) # Very good - data should be normal d
 # Making the NULL model, only including participants
 Log.WS.1.PCPs <- lmer(log(avgSpeed) ~ 1 +
                         (1 | ParticipantID),
-                      data = dfpSumTestID, REML = FALSE )
+                      data = dfpSumTestID, REML = FALSE)
 
+r.squaredGLMM(Log.WS.1.PCPs) 
 summary(Log.WS.1.PCPs)
 confint(Log.WS.1.PCPs)
 plot(Log.WS.1.PCPs, type = c("p", "smooth"))
@@ -323,6 +801,7 @@ Log.WS.Alerts.PCPs <- lmer(log(avgSpeed) ~ objectDetected +
                            data = dfpSumTestID, REML = FALSE
 )
 
+r.squaredGLMM(Log.WS.Alerts.PCPs) 
 summary(Log.WS.Alerts.PCPs)
 confint(Log.WS.Alerts.PCPs)
 plot(Log.WS.Alerts.PCPs, type = c("p", "smooth"))
@@ -338,6 +817,7 @@ Log.WS.Alerts.PCPs.Run <- lmer(log(avgSpeed) ~ objectDetected +
                                   data = dfpSumTestID, REML = FALSE
 )
 
+r.squaredGLMM(Log.WS.Alerts.PCPs.Run) 
 summary(Log.WS.Alerts.PCPs.Run)
 
 # significant - yes
@@ -351,6 +831,7 @@ Log.WS.Alerts.PCPs.Run.Scen <- lmer(log(avgSpeed) ~ objectDetected +
                                   data = dfpSumTestID, REML = FALSE
 )
 
+r.squaredGLMM(Log.WS.Alerts.PCPs.Run.Scen) 
 summary(Log.WS.Alerts.PCPs.Run.Scen)
 
 # significant - yes
@@ -363,10 +844,12 @@ Log.WS.Alerts.PCPs.Slope.Scen.Run <- lmer(log(avgSpeed) ~ objectDetected +
                                           (1 | RunNumber),
                                         data = dfpSumTestID, REML = FALSE
 )
+
+r.squaredGLMM(Log.WS.Alerts.PCPs.Slope.Scen.Run) 
 summary(Log.WS.Alerts.PCPs.Slope.Scen.Run)
 
 # significant - Yes
-anova(Log.WS.Alerts.PCPs.Scen.Run, Log.WS.Alerts.PCPs.Slope.Scen.Run)
+anova(Log.WS.Alerts.PCPs.Run.Scen, Log.WS.Alerts.PCPs.Slope.Scen.Run)
 
 # add run number
 Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope <- lmer(log(avgSpeed) ~ objectDetected + 
@@ -375,6 +858,8 @@ Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope <- lmer(log(avgSpeed) ~ objectDetected +
                                                (1 + objectDetected | RunNumber),
                                              data = dfpSumTestID, REML = FALSE
 )
+
+r.squaredGLMM(Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope)
 summary(Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope)
 
 # significant - Yes 
@@ -387,10 +872,114 @@ Log.WS.Alerts.PCPs.Slope.Scen.Slope.Run.Slope <- lmer(log(avgSpeed) ~ objectDete
                                                    (1 + objectDetected | RunNumber),
                                                  data = dfpSumTestID, REML = FALSE
 )
+
+r.squaredGLMM(Log.WS.Alerts.PCPs.Slope.Scen.Slope.Run.Slope)
 summary(Log.WS.Alerts.PCPs.Slope.Scen.Slope.Run.Slope)
 
 # significant - No 
 anova(Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope, Log.WS.Alerts.PCPs.Slope.Scen.Slope.Run.Slope)
+
+
+
+#
+# Making the NULL model, only including participants
+Log.WS.1.PCPs <- lmer(log(avgSpeed) ~ 1 +
+                        (1 | ParticipantID),
+                      data = dfpSumTestID, REML = FALSE )
+
+r.squaredGLMM(Log.WS.1.PCPs) 
+summary(Log.WS.1.PCPs)
+confint(Log.WS.1.PCPs)
+plot(Log.WS.1.PCPs, type = c("p", "smooth"))
+qqmath(Log.WS.1.PCPs, id = 0.05)
+
+# adding scenario
+Log.WS.Alerts.PCPs <- lmer(log(avgSpeed) ~ objectDetected +
+                             (1 | ParticipantID),
+                           data = dfpSumTestID, REML = FALSE
+)
+
+r.squaredGLMM(Log.WS.Alerts.PCPs) 
+summary(Log.WS.Alerts.PCPs)
+confint(Log.WS.Alerts.PCPs)
+plot(Log.WS.Alerts.PCPs, type = c("p", "smooth"))
+
+
+# significant - yes
+anova(Log.WS.1.PCPs, Log.WS.Alerts.PCPs)
+
+# Add number of alerts 
+Log.WS.Alerts.PCPs.Run <- lmer(log(avgSpeed) ~ objectDetected + 
+                                 (1 + objectDetected | ParticipantID),
+                               data = dfpSumTestID, REML = FALSE
+)
+
+r.squaredGLMM(Log.WS.Alerts.PCPs.Run) 
+summary(Log.WS.Alerts.PCPs.Run)
+
+dfpSumTestID <- dfpSumTestID %>%
+  mutate(ParticipantID = as.factor(ParticipantID))
+
+# significant - yes
+anova(Log.WS.Alerts.PCPs, Log.WS.Alerts.PCPs.Run)
+
+# add slope to participants
+Log.WS.Alerts.PCPs.Run.Scen <- lmer(log(avgSpeed) ~ objectDetected + 
+                                      (1 + objectDetected | ParticipantID) +
+                                      (1 | RunNumber),
+                                    data = dfpSumTestID, REML = FALSE
+)
+
+r.squaredGLMM(Log.WS.Alerts.PCPs.Run.Scen) 
+summary(Log.WS.Alerts.PCPs.Run.Scen)
+
+# significant - yes
+anova(Log.WS.Alerts.PCPs.Run, Log.WS.Alerts.PCPs.Run.Scen)
+
+# add slope to scenario
+Log.WS.Alerts.PCPs.Slope.Scen.Run <- lmer(log(avgSpeed) ~ objectDetected + 
+                                            (1 + objectDetected | ParticipantID) +
+                                            (1 + objectDetected  | RunNumber),
+                                          data = dfpSumTestID, REML = FALSE
+)
+
+r.squaredGLMM(Log.WS.Alerts.PCPs.Slope.Scen.Run) 
+summary(Log.WS.Alerts.PCPs.Slope.Scen.Run)
+
+# significant - Yes
+anova(Log.WS.Alerts.PCPs.Run.Scen, Log.WS.Alerts.PCPs.Slope.Scen.Run)
+
+# add run number
+Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope <- lmer(log(avgSpeed) ~ objectDetected + 
+                                                  (1 + objectDetected | ParticipantID) +
+                                                  (1 | Scenario) +
+                                                  (1 + objectDetected | RunNumber),
+                                                data = dfpSumTestID, REML = FALSE
+)
+
+r.squaredGLMM(Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope)
+summary(Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope)
+
+# significant - Yes 
+anova(Log.WS.Alerts.PCPs.Slope.Scen.Run, Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope)
+
+# add run number
+Log.WS.Alerts.PCPs.Slope.Scen.Slope.Run.Slope <- lmer(log(avgSpeed) ~ objectDetected + 
+                                                        (1 + objectDetected | ParticipantID) +
+                                                        (1 + objectDetected | Scenario) +
+                                                        (1 + objectDetected | RunNumber),
+                                                      data = dfpSumTestID, REML = FALSE
+)
+
+r.squaredGLMM(Log.WS.Alerts.PCPs.Slope.Scen.Slope.Run.Slope)
+summary(Log.WS.Alerts.PCPs.Slope.Scen.Slope.Run.Slope)
+
+# significant - No 
+anova(Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope, Log.WS.Alerts.PCPs.Slope.Scen.Slope.Run.Slope)
+
+
+
+
 
 #----- LMEM: Walking Speed vs Phy-Alerts -----
 
@@ -574,6 +1163,104 @@ WS.Power.Part.Slope.Scen.Slope.Run.Slope.augAlert <- lmer(log(avgSpeed) ~ 1 + lo
 # significant - No 
 anova(WS.Power.Part.Slope.Scen.Slope.Run.augAlert, WS.Power.Part.Slope.Scen.Slope.Run.Slope.augAlert)
 
+#----- LMEM: alerts VS condition -----
+
+# Making the NULL model, only including participants
+Log.Alert.1.PCPs <- lmer(objectDetected ~ 1 +
+                        (1 | ParticipantID),
+                      data = dfpSumTestID, REML = FALSE)
+
+r.squaredGLMM(Log.Alert.1.PCPs) 
+summary(Log.Alert.1.PCPs)
+confint(Log.Alert.1.PCPs)
+plot(Log.Alert.1.PCPs, type = c("p", "smooth"))
+qqmath(Log.Alert.1.PCPs, id = 0.05)
+
+# adding scenario
+Log.Alert.FOD.PCPs <- lmer(objectDetected ~ FOD +
+                             (1 | ParticipantID) +
+                             (1 | RunNumber),
+                           data = dfpSumTestID, REML = FALSE
+)
+
+r.squaredGLMM(Log.Alert.FOD.PCPs) 
+summary(Log.Alert.FOD.PCPs)
+confint(Log.Alert.FOD.PCPs)
+plot(Log.Alert.FOD.PCPs, type = c("p", "smooth"))
+
+
+# significant - yes
+anova(Log.Alert.1.PCPs, Log.Alert.FOD.PCPs)
+
+# Add number of alerts 
+Log.Alert.FOD.PCPs.slop <- lmer(objectDetected ~ FOD + 
+                                 (1 | ParticipantID),
+                               data = dfpSumTestID, REML = FALSE
+)
+
+r.squaredGLMM(Log.Alert.FOD.PCPs.slop) 
+summary(Log.Alert.FOD.PCPs.slop)
+
+# significant - yes
+anova(Log.Alert.FOD.PCPs, Log.Alert.FOD.PCPs.slop)
+
+# add slope to participants
+Log.Alert.FOD.PCPs.slop.Run <- lmer(objectDetected ~  FOD + 
+                                      (1 | ParticipantID) +
+                                      (1 | RunNumber),
+                                    data = dfpSumTestID, REML = FALSE
+)
+
+r.squaredGLMM(Log.Alert.FOD.PCPs.slop.Run) 
+summary(Log.Alert.FOD.PCPs.slop.Run)
+
+# significant - yes
+anova(Log.Alert.FOD.PCPs.slop, Log.Alert.FOD.PCPs.slop.Run)
+
+# add slope to scenario
+Log.WS.Alerts.PCPs.Slope.Scen.Run <- lmer(log(avgSpeed) ~ objectDetected + 
+                                            (1 + objectDetected | ParticipantID) +
+                                            (1 | Scenario) +
+                                            (1 | RunNumber),
+                                          data = dfpSumTestID, REML = FALSE
+)
+
+r.squaredGLMM(Log.WS.Alerts.PCPs.Slope.Scen.Run) 
+summary(Log.WS.Alerts.PCPs.Slope.Scen.Run)
+
+# significant - Yes
+anova(Log.WS.Alerts.PCPs.Run.Scen, Log.WS.Alerts.PCPs.Slope.Scen.Run)
+
+# add run number
+Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope <- lmer(log(avgSpeed) ~ objectDetected + 
+                                                  (1 + objectDetected | ParticipantID) +
+                                                  (1 | Scenario) +
+                                                  (1 + objectDetected | RunNumber),
+                                                data = dfpSumTestID, REML = FALSE
+)
+
+r.squaredGLMM(Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope)
+summary(Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope)
+
+# significant - Yes 
+anova(Log.WS.Alerts.PCPs.Slope.Scen.Run, Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope)
+
+# add run number
+Log.WS.Alerts.PCPs.Slope.Scen.Slope.Run.Slope <- lmer(log(avgSpeed) ~ objectDetected + 
+                                                        (1 + objectDetected | ParticipantID) +
+                                                        (1 + objectDetected | Scenario) +
+                                                        (1 + objectDetected | RunNumber),
+                                                      data = dfpSumTestID, REML = FALSE
+)
+
+r.squaredGLMM(Log.WS.Alerts.PCPs.Slope.Scen.Slope.Run.Slope)
+summary(Log.WS.Alerts.PCPs.Slope.Scen.Slope.Run.Slope)
+
+# significant - No 
+anova(Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope, Log.WS.Alerts.PCPs.Slope.Scen.Slope.Run.Slope)
+
+
+
 # LMER model - linear mixed effect models ----------------
 
 
@@ -660,8 +1347,8 @@ dfp %>%
   filter(TimeSinceObjDetStart < 5 & TimeSinceObjDetStart > 0) %>%
   ggplot(aes(
     x = TimeSinceObjDetStart,
-    y = rollingSpeedMedian,
-    colour = FOD
+    y = rollingSpeedMedian#,
+    #colour = FOD
   )) +
   geom_smooth(se = F) +
   theme_bw() +
@@ -673,19 +1360,170 @@ dfp %>%
     axis.text.y = element_text(size = 14),
     axis.title = element_text(size = 14),
     legend.title = element_text(size = 14),
-    legend.text = element_text(size = 14)
+    legend.text = element_text(size = 14),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black")
   ) +
   scale_color_discrete("") +
   scale_shape_discrete("")
 
+dfp %>%
+  filter(TimeSinceObjDetStart < 4 & TimeSinceObjDetStart > 0) %>%
+  ggplot(aes(
+    x = TimeSinceObjDetStart,
+    y = rollingSpeedMedian#,
+    #colour = FOD
+  )) +
+  #geom_smooth(color = "orange", se = F) +
+  #geom_point(aes(group=FOD, colour = FOD))+
+  geom_smooth(aes(colour = FOD, linetype = as.factor(Range)), se = F) +
+  theme_bw() +
+  ylab("Walking Speed (m/s)") +
+  xlab("Time Since Alert Onset (seconds)") +
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 14),
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 14),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black")
+  ) +
+  scale_color_discrete("") +
+  scale_shape_discrete("")
+
+#----- How Much and How Often - Alert Cost: Per AWC -----
+
+#_______________________________________________________________________________________________________
+# Overall Avg for walking speed at start and after 1.2 of an alert
+#_______________________________________________________________________________________________________
+
+#Speed at alert start
+avgWalkingSpeedAtDetStart <- dfp %>%
+  dplyr::filter(TimeSinceObjDetStart > 0 & TimeSinceObjDetStart < 0.1 & !is.na(TimeSinceObjDetStart)) %>%
+  dplyr::group_by(ParticipantID, FOD, testID, objDetInTestID) %>%
+  dplyr::summarise(avgSpeedDetStart = mean(rollingSpeedMedian, na.rm=TRUE)) 
+
+#Speed at alert after 1.2s
+avgWalkingSpeedAtafter1SecDetStart <- dfp %>%
+  filter(TimeSinceObjDetStart > 1.2 & TimeSinceObjDetStart < 1.3 & !is.na(TimeSinceObjDetStart)) %>%
+  dplyr::group_by(ParticipantID, FOD, testID, objDetInTestID) %>%
+  dplyr::summarise(avgSpeedDetSlut = mean(rollingSpeedMedian, na.rm=TRUE))
+
+# difference in speed at and after alerts 
+SpeedAtandAfterAlert <- merge(avgWalkingSpeedAtDetStart, avgWalkingSpeedAtafter1SecDetStart)
+
+OverallAvgSpeed <- SpeedAtandAfterAlert %>%
+  group_by(FOD) %>%
+  dplyr::summarise(SlowSpeedStart = mean(avgSpeedDetStart),
+                   SlowSpeedSlut = mean(avgSpeedDetSlut))
+
+OverallAvgSpeed
+
+#_______________________________________________________________________________________________________
+# Split Avg for walking speed at start and after 1.2 of an alert for increasing and decreasing speeds
+#_______________________________________________________________________________________________________
+
+SpeedAtandAfterAlert <- SpeedAtandAfterAlert %>%
+  dplyr::mutate(SpeedDiff = avgSpeedDetSlut - avgSpeedDetStart) %>%
+  group_by(FOD) %>%
+  dplyr::mutate(TotalNumberOfAlert = max(1:n()))
+
+SlowedDown <- SpeedAtandAfterAlert %>%
+  filter(SpeedDiff < 0) %>%
+  group_by(FOD) %>%
+  dplyr::mutate(NumberOfAlertSpeedDown = 1:n())  %>%
+  dplyr::summarise(SlowSpeedStart = mean(avgSpeedDetStart),
+                   SlowSpeedSlut = mean(avgSpeedDetSlut),
+                   AvgSpeedDown = mean(SpeedDiff),
+                   sdSpeedDown = sd(SpeedDiff),
+                   TotalNumberOfAlert = max(TotalNumberOfAlert),
+                   NumberOfAlertSpeedDown = max(NumberOfAlertSpeedDown)) %>%
+  dplyr::mutate(ProcentageSpeedDrop = NumberOfAlertSpeedDown / TotalNumberOfAlert * 100,
+                SDProcentageSpeedDrop = sd(ProcentageSpeedDrop)) 
+
+view(SlowedDown)
+
+SpeedUp <- SpeedAtandAfterAlert %>%
+  filter(SpeedDiff > 0) %>%
+  group_by(FOD) %>%
+  dplyr::mutate(NumberOfAlertSpeedUp = 1:n())  %>%
+  dplyr::summarise(FastSpeedStart = mean(avgSpeedDetStart),
+                   FastSpeedSlut = mean(avgSpeedDetSlut),
+                   AvgSpeedUp = mean(SpeedDiff),
+                   sdSpeedUp = sd(SpeedDiff),
+                   TotalNumberOfAlert = max(TotalNumberOfAlert),
+                   NumberOfAlertSpeedUp = max(NumberOfAlertSpeedUp)) %>%
+  dplyr::mutate(ProcentageSpeedUp = NumberOfAlertSpeedUp/TotalNumberOfAlert*100)
+
+SpeedUp
+
+#----- Plot Alert Cost: Split increase and decrease -----
+
+test <- dfp %>%
+  filter(TimeSinceObjDetStart > 0 & TimeSinceObjDetStart <= 0.1 & !is.na(TimeSinceObjDetStart)) %>%
+  dplyr::group_by(FOD, testID, objDetInTestID) %>%
+  dplyr::summarise(avgSpeedDetStart = mean(rollingSpeedMedian, na.rm=TRUE)) %>%
+  right_join(dfp) 
+
+test <- dfp %>%
+  filter(TimeSinceObjDetStart > 1.2 & TimeSinceObjDetStart < 1.3 & !is.na(TimeSinceObjDetStart)) %>%
+  dplyr::group_by(FOD, testID, objDetInTestID) %>%
+  dplyr::summarise(avgSpeedDetSlut = mean(rollingSpeedMedian, na.rm=TRUE)) %>%
+  right_join(test) %>%
+  arrange(rowNum)
+
+test <- test %>%
+  dplyr::mutate(SpeedDiff = avgSpeedDetSlut - avgSpeedDetStart) %>%
+  dplyr::mutate(SpeedChange = ifelse(SpeedDiff < 0, "Slowed Down After Alert",
+                              ifelse(SpeedDiff > 0, "Speeded Up After Alert", NA))) %>%
+  dplyr::mutate(AlertDistance = ifelse(1 > ObjectDistance & ObjectDistance > 0, 1,
+                                ifelse(2 > ObjectDistance & ObjectDistance >= 1, 2,
+                                ifelse(3 > ObjectDistance & ObjectDistance >= 2, 3,
+                                ifelse(ObjectDistance >= 3, 4, NA)))))
+
+test %>%
+  filter(TimeSinceObjDetStart < 5 & TimeSinceObjDetStart > 0 & !is.na(SpeedChange) & SpeedChange == "Slowed Down After Alert") %>%
+  ggplot(aes(
+    x = TimeSinceObjDetStart,
+    y = rollingSpeedMedian#,
+    # = SpeedChange
+  )) +
+  #geom_smooth(color = "orange", se = F) +
+  #geom_point(aes(group=FOD, colour = FOD))+
+  geom_smooth(aes(colour = as.factor(Range)), se = F) +
+  theme_bw() +
+  ylab("Walking Speed (m/s)") +
+  xlab("Time Since Alert Onset (seconds)") +
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 14),
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 14),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black")
+  ) +
+  scale_color_discrete("") +
+  scale_shape_discrete("")
+
+h
 #----- Plot Alert Cost: Per AWC and Range -----
 dfp %>%
   # filter(TimeSinceObjDetStart < 5 & TimeSinceObjDetStart > 0) %>%
   filter(objDetStartDistance > 2) %>%
   ggplot(aes(
     x = TimeSinceObjDetStart,
-    y = rollingSpeedMedian
-    # colour = FOD
+    y = rollingSpeedMedian,
+    colour = Range
   )) +
   geom_smooth() +
   theme_bw() +
@@ -696,7 +1534,13 @@ dfp %>%
     legend.position = "bottom",
     axis.text.x = element_text(size = 14),
     axis.text.y = element_text(size = 14),
-    axis.title = element_text(size = 14)
+    axis.title = element_text(size = 14),
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 14),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black")
   ) +
   scale_color_discrete("FOA") +
   scale_shape_discrete("FOA")
@@ -712,18 +1556,34 @@ dfp %>%
   # geom_hline(yintercept=0) +
   geom_smooth(se = F) +
   theme_bw() +
-  ylab("Change in Walking Speed From Alert Onset (m/s)") +
+  ylab("Walking Speed (m/s)") +
   xlab("Time Since Alert Onset (seconds)") +
+  guides(colour = guide_legend(title="Range")) +
   theme(
     legend.position = "bottom",
     axis.text.x = element_text(size = 14),
     axis.text.y = element_text(size = 14),
     axis.title = element_text(size = 14),
     legend.title = element_text(size = 14),
-    legend.text = element_text(size = 14)
+    legend.text = element_text(size = 14),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black")
   ) +
   scale_color_discrete("") +
   scale_shape_discrete("")
+
+test <- dfp %>%
+  filter(objDetStart == 1) %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::summarise(avgSpeedDetStart = mean(rollingSpeedMedian))
+
+
+test2 <- dfp %>%
+  filter(TimeSinceObjDetStart > 1.2 & TimeSinceObjDetStart < 1.3 & !is.na(TimeSinceObjDetStart)) %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::summarise(avgSpeedDetStart = mean(rollingSpeedMedian))
 
 #----- Plot Alert Cost: All participants (Not Working) -----
 dfp %>%
@@ -791,7 +1651,7 @@ dfp %>%
     x = TimeSincePhysDetStart,
     y = rollingSpeedMedian,
     # linetype = factor(day),
-    color = "PhysicalAlerts"
+    color = "Kinetic Alerts"
   ),
   se = F
   ) +
@@ -799,16 +1659,352 @@ dfp %>%
     x = TimeSinceAugDetStart,
     y = rollingSpeedMedian,
     # linetype = factor(day),
-    color = "AugmentedAlerts"
+    color = "Vibration Alerts"
   ),
   se = F
   ) +
   # geom_smooth(data = augDetDataTW, aes(x = TimeSinceVibStart, y = SpeedDiffFromStart), color = "#D16103", se = F) +
   # geom_smooth(data = augDetDataCW, aes(x = TimeSinceVibStart, y = SpeedDiffFromStart), color = "#52854C", se = F) +
   theme_bw() +
-  ylab("Cehange in Walking Speed From Alert Onset (m/s)") +
+  ylab("Walking Speed (m/s)") +
   xlab("Time Since Alert Onset (seconds)") +
-  # facet_grid(rows = vars(FOD))+
+  #facet_grid(rows = vars(FOD))+
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 14),
+    legend.title = element_blank(),
+    legend.text = element_text(size = 14),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black")
+  ) 
+
+#___________________________________________________________________________________
+## Only Alerts that slowed down the user
+#___________________________________________________________________________________
+
+
+testPhys <- dfp %>%
+  filter(TimeSincePhysDetStart > 0 & TimeSincePhysDetStart <= 0.1 & !is.na(TimeSincePhysDetStart)) %>%
+  dplyr::group_by(FOD, testID, objDetInTestID) %>%
+  dplyr::summarise(avgSpeedPhysDetStart = mean(rollingSpeedMedian, na.rm=TRUE)) %>%
+  right_join(dfp) 
+
+testPhys <- dfp %>%
+  filter(TimeSincePhysDetStart > 1.2 & TimeSincePhysDetStart < 1.3 & !is.na(TimeSincePhysDetStart)) %>%
+  dplyr::group_by(FOD, testID, objDetInTestID) %>%
+  dplyr::summarise(avgSpeedPhysDetSlut = mean(rollingSpeedMedian, na.rm=TRUE)) %>%
+  right_join(testPhys) %>%
+  arrange(rowNum)
+
+testPhys <- testPhys %>%
+  #dplyr::select(ParticipantID, FOD, Range, testID, rollingSpeedMedian, TimeSincePhysDetStart, avgSpeedPhysDetStart, avgSpeedPhysDetSlut) %>%
+  dplyr::mutate(PhysSpeedDiff = avgSpeedPhysDetSlut - avgSpeedPhysDetStart) %>%
+  dplyr::mutate(PhysSpeedChange = ifelse(PhysSpeedDiff < 0, "Slowed Down After Alert",
+                                     ifelse(PhysSpeedDiff > 0, "Speeded Up After Alert", NA)))
+
+testAug <- dfp %>%
+  filter(TimeSinceAugDetStart > 0 & TimeSinceAugDetStart <= 0.1 & !is.na(TimeSinceAugDetStart)) %>%
+  dplyr::group_by(FOD, testID, objDetInTestID) %>%
+  dplyr::summarise(avgSpeedAugDetStart = mean(rollingSpeedMedian, na.rm=TRUE)) %>%
+  right_join(dfp) 
+
+testAug <- dfp %>%
+  filter(TimeSinceAugDetStart > 1.2 & TimeSinceAugDetStart < 1.3 & !is.na(TimeSinceAugDetStart)) %>%
+  dplyr::group_by(FOD, testID, objDetInTestID) %>%
+  dplyr::summarise(avgSpeedAugDetSlut = mean(rollingSpeedMedian, na.rm=TRUE)) %>%
+  right_join(testAug) %>%
+  arrange(rowNum)
+
+testAug <- testAug %>%
+  #dplyr::select(ParticipantID, FOD, Range, testID, rollingSpeedMedian, TimeSinceAugDetStart, avgSpeedAugDetSlut, avgSpeedAugDetStart) %>%
+  dplyr::mutate(AugSpeedDiff = avgSpeedAugDetSlut - avgSpeedAugDetStart) %>%
+  dplyr::mutate(AugSpeedChange = ifelse(AugSpeedDiff < 0, "Slowed Down After Alert",
+                                         ifelse(AugSpeedDiff > 0, "Speeded Up After Alert", NA)))
+
+testPhysAug <- right_join(testPhys, testAug)
+
+testPhysAug %>%
+  filter(TimeSincePhysDetStart < 5 &  TimeSinceAugDetStart < 5 &  !is.na(AugSpeedChange) & AugSpeedChange == "Slowed Down After Alert" & !is.na(PhysSpeedChange) & PhysSpeedChange == "Slowed Down After Alert") %>%
+  ggplot() +
+  geom_smooth(aes(
+    x = TimeSincePhysDetStart,
+    y = rollingSpeedMedian,
+    linetype = as.factor(PhysSpeedChange),
+    color = "Kinetic Alerts"
+  ),
+  se = F
+  ) +
+  geom_smooth(aes(
+    x = TimeSinceAugDetStart,
+    y = rollingSpeedMedian,
+    linetype = as.factor(AugSpeedChange),
+    color = FOD#"Vibration Alerts"
+  ),
+  se = F
+  ) +
+  # geom_smooth(data = augDetDataTW, aes(x = TimeSinceVibStart, y = SpeedDiffFromStart), color = "#D16103", se = F) +
+  # geom_smooth(data = augDetDataCW, aes(x = TimeSinceVibStart, y = SpeedDiffFromStart), color = "#52854C", se = F) +
+  theme_bw() +
+  ylab("Walking Speed (m/s)") +
+  xlab("Time Since Alert Onset (seconds)") +
+  #facet_grid(rows = vars(FOD))+
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 14),
+    legend.title = element_blank(),
+    legend.text = element_text(size = 14),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black")
+  ) +
+  guides(linetype=FALSE)
+
+#----- How Much and How Often - Alert Cost: Phys vs Aug -----
+
+#_________________________________________________________________________________________________________________
+# Physical Alerts
+#_________________________________________________________________________________________________________________
+
+#_______________________________________________________________________________________________________
+# Overall Avg for walking speed at physical alert start and after 1.2 of an alert
+#_______________________________________________________________________________________________________
+
+# Means for physical detection start
+avgWalkingSpeedAtPhysDetStart <- dfp %>%
+  filter(TimeSincePhysDetStart > 0 & TimeSincePhysDetStart < 0.1 & !is.na(TimeSincePhysDetStart)) %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::summarise(avgSpeedPhysDetStart = mean(rollingSpeedMedian, na.rm=TRUE)#,
+                   #medianSpeedPhysDetStart = median(rollingSpeedMedian, na.rm=TRUE),
+                   #sdSpeedPhysDetStart = sd(rollingSpeedMedian, na.rm=TRUE)
+                   )
+
+avgWalkingSpeedAtPhysDetStart
+
+# Means 1.2s after physical detection start
+avgWalkingSpeedAtafter1SecPhysDetStart <- dfp %>%
+  filter(TimeSincePhysDetStart > 1.2 & TimeSincePhysDetStart < 1.3 & !is.na(TimeSincePhysDetStart)) %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::summarise(avgAfterSpeedPhysDetStart = mean(rollingSpeedMedian, na.rm=TRUE)#,
+                   #medianAfterSpeedPhysDetStart = median(rollingSpeedMedian, na.rm=TRUE),
+                   #sdAfterSpeedPhysDetStart = sd(rollingSpeedMedian, na.rm=TRUE)
+                   )
+
+avgWalkingSpeedAtafter1SecPhysDetStart
+
+PhysavgWalkingSpeed <- merge(avgWalkingSpeedAtPhysDetStart, avgWalkingSpeedAtafter1SecPhysDetStart)
+
+PhysavgWalkingSpeed
+
+#_______________________________________________________________________________________________________
+# Split Avg for walking speed at physical alert start and after 1.2 of an alert for increasing and decreasing speeds
+#_______________________________________________________________________________________________________
+
+#Speed at Physical alert start
+PhysSpeedStart <- dfp %>%
+  dplyr::filter(TimeSincePhysDetStart > 0 & TimeSincePhysDetStart < 0.1 &!is.na(TimeSincePhysDetStart)) %>%
+  dplyr::group_by(FOD, testID, objDetInTestID) %>%
+  dplyr::summarise(PhysSpeedStart = mean(rollingSpeedMedian, na.rm=TRUE)) 
+
+#Speed at Physical alert after 1.2s
+PhysSpeedSlut <- dfp %>%
+  filter(TimeSincePhysDetStart > 1.2 & TimeSincePhysDetStart < 1.3 &!is.na(TimeSincePhysDetStart)) %>%
+  dplyr::group_by(FOD, testID, objDetInTestID) %>%
+  dplyr::summarise(PhysSpeedSlut = mean(rollingSpeedMedian, na.rm=TRUE))
+
+# difference in speed at and after physical alerts 
+PhysSpeedAtandAfterAlert <- merge(PhysSpeedStart, PhysSpeedSlut)
+
+PhysSpeedAtandAfterAlert <- PhysSpeedAtandAfterAlert %>%
+  dplyr::mutate(PhysSpeedDiff = PhysSpeedSlut - PhysSpeedStart) %>%
+  group_by(FOD) %>%
+  dplyr::mutate(TotalNumberOfPhysAlert = max(1:n()))
+
+PhysSlowedDown <- PhysSpeedAtandAfterAlert %>%
+  filter(PhysSpeedDiff < 0) %>%
+  group_by(FOD) %>%
+  dplyr::mutate(NumberOfPhysAlertSpeedDown = 1:n())  %>%
+  dplyr::summarise(PhysSpeedStart = mean(PhysSpeedStart),
+                   PhysSpeedSlut = mean(PhysSpeedSlut),
+                   PhysAvgSpeedDown = mean(PhysSpeedDiff),
+                   sdSpeedDown = sd(PhysSpeedDiff),
+                   TotalNumberOfPhysAlert = max(TotalNumberOfPhysAlert),
+                   NumberOfPhysAlertSpeedDown = max(NumberOfPhysAlertSpeedDown)) %>%
+  dplyr::mutate(ProcentageSpeedDrop = NumberOfPhysAlertSpeedDown / TotalNumberOfPhysAlert * 100) 
+
+PhysSlowedDown
+
+PhysSpeedUp <- PhysSpeedAtandAfterAlert %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::filter(PhysSpeedDiff > 0) %>%
+  dplyr::mutate(NumberOfPhysAlertSpeedUp = 1:n())  %>%
+  dplyr::summarise(PhysSpeedStart = mean(PhysSpeedStart),
+                   PhysSpeedSlut = mean(PhysSpeedSlut),
+                   PhysAvgSpeedUp = mean(PhysSpeedDiff),
+                   medianSpeedUp  = median(PhysSpeedDiff),
+                   sdSpeedUp = sd(PhysSpeedDiff),
+                   TotalNumberOfPhysAlert = max(TotalNumberOfPhysAlert),
+                   NumberOfPhysAlertSpeedUp = max(NumberOfPhysAlertSpeedUp)) %>%
+  dplyr::mutate(ProcentageSpeedUp = NumberOfPhysAlertSpeedUp/TotalNumberOfPhysAlert*100)
+
+PhysSpeedUp
+
+#_________________________________________________________________________________________________________________
+# Augmented Alerts
+#_________________________________________________________________________________________________________________
+
+#_______________________________________________________________________________________________________
+# Overall Avg for walking speed at augmented alert start and after 1.2 of an alert
+#_______________________________________________________________________________________________________
+
+# Means for augmented detection start
+avgWalkingSpeedAtAugDetStart <- dfp %>%
+  filter(TimeSinceAugDetStart > 0 & TimeSinceAugDetStart < 0.1 & !is.na(TimeSinceAugDetStart)) %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::summarise(avgSpeedAugDetStart = mean(rollingSpeedMedian, na.rm=TRUE)#,
+                   #medianSpeedAugDetStart = median(rollingSpeedMedian, na.rm=TRUE),
+                   #sdSpeedAugDetStart = sd(rollingSpeedMedian, na.rm=TRUE)
+  )
+
+avgWalkingSpeedAtAugDetStart
+
+# Means 1.2s after augmented detection start
+avgWalkingSpeedAtafter1SecAugDetStart <- dfp %>%
+  filter(TimeSinceAugDetStart > 1.2 & TimeSinceAugDetStart < 1.3 & !is.na(TimeSinceAugDetStart)) %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::summarise(avgAfterSpeedAugDetStart = mean(rollingSpeedMedian, na.rm=TRUE)#,
+                   #medianAfterSpeedAugDetStart = median(rollingSpeedMedian, na.rm=TRUE),
+                   #sdAfterSpeedAugDetStart = sd(rollingSpeedMedian, na.rm=TRUE)
+  )
+
+avgWalkingSpeedAtafter1SecAugDetStart
+
+AugAvgWalkingSpeed <- merge(avgWalkingSpeedAtAugDetStart, avgWalkingSpeedAtafter1SecAugDetStart)
+
+AugAvgWalkingSpeed
+
+#_______________________________________________________________________________________________________
+# Split Avg for walking speed at augmented alert start and after 1.2 of an alert for increasing and decreasing speeds
+#_______________________________________________________________________________________________________
+
+#Speed at Augmented alert start
+AugSpeedStart <- dfp %>%
+  dplyr::filter(TimeSinceAugDetStart > 0 & TimeSinceAugDetStart < 0.1 &!is.na(TimeSinceAugDetStart)) %>%
+  dplyr::group_by(FOD, testID, objDetInTestID) %>%
+  dplyr::summarise(AugSpeedStart = mean(rollingSpeedMedian, na.rm=TRUE))
+
+mean(AugSpeedStart$AugSpeedStart)
+
+#Speed at augmented alert after 1.2s
+AugSpeedSlut <- dfp %>%
+  filter(TimeSinceAugDetStart > 1.2 & TimeSinceAugDetStart < 1.3 &!is.na(TimeSinceAugDetStart)) %>%
+  dplyr::group_by(FOD, testID, objDetInTestID) %>%
+  dplyr::summarise(AugSpeedSlut = mean(rollingSpeedMedian, na.rm=TRUE))
+
+mean(AugSpeedSlut$AugSpeedSlut)
+
+# difference in speed at and after augmented alerts 
+AugSpeedAtandAfterAlert <- merge(AugSpeedStart, AugSpeedSlut)
+
+AugSpeedAtandAfterAlert <- AugSpeedAtandAfterAlert %>%
+  dplyr::mutate(AugSpeedDiff = AugSpeedSlut - AugSpeedStart) %>%
+  group_by(FOD) %>%
+  dplyr::mutate(TotalNumberOfAugAlert = max(1:n()))
+
+AugSlowedDown <- AugSpeedAtandAfterAlert %>%
+  filter(AugSpeedDiff < 0) %>%
+  group_by(FOD) %>%
+  dplyr::mutate(NumberOfAugAlertSpeedDown = 1:n())  %>%
+  dplyr::summarise(AugSpeedStart = mean(AugSpeedStart),
+                   AugSpeedSlut = mean(AugSpeedSlut),
+                   AvgSpeedDown = mean(AugSpeedDiff),
+                   sdSpeedDown = sd(AugSpeedDiff),
+                   TotalNumberOfAugAlert = max(TotalNumberOfAugAlert),
+                   NumberOfAugAlertSpeedDown = max(NumberOfAugAlertSpeedDown)) %>%
+  dplyr::mutate(ProcentageSpeedDrop = NumberOfAugAlertSpeedDown / TotalNumberOfAugAlert * 100) 
+
+AugSlowedDown
+
+AugSpeedUp <- AugSpeedAtandAfterAlert %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::filter(AugSpeedDiff > 0) %>%
+  dplyr::mutate(NumberOfAugAlertSpeedUp = 1:n())  %>%
+  dplyr::summarise(AugSpeedStart = mean(AugSpeedStart),
+                   AugSpeedSlut = mean(AugSpeedSlut),
+                   AvgSpeedUp = mean(AugSpeedDiff),
+                   sdSpeedUp = sd(AugSpeedDiff),
+                   TotalNumberOfAugAlert = max(TotalNumberOfAugAlert),
+                   NumberOfAugAlertSpeedUp = max(NumberOfAugAlertSpeedUp)) %>%
+  dplyr::mutate(ProcentageSpeedUp = NumberOfAugAlertSpeedUp/TotalNumberOfAugAlert*100)
+
+AugSpeedUp
+
+#----- Plot Alert Cost: Phys vs Aug Split increase and decrease  (cleaned for paper) -----
+
+#_________________________________________________________________________________________________________________
+# Physical Alerts
+#_________________________________________________________________________________________________________________
+
+test <- dfp %>%
+  dplyr::filter(TimeSincePhysDetStart > 0 & TimeSincePhysDetStart <= 0.1 &!is.na(TimeSincePhysDetStart)) %>%
+  dplyr::group_by(FOD, testID, objDetInTestID) %>%
+  dplyr::summarise(PhysSpeedStart = mean(rollingSpeedMedian, na.rm=TRUE))  %>%
+  right_join(dfp) %>%
+  arrange(rowNum)
+
+test <- test %>%
+  filter(TimeSincePhysDetStart > 0.1 & TimeSincePhysDetStart < 1.3 &!is.na(TimeSincePhysDetStart)) %>%
+  dplyr::group_by(FOD, testID, objDetInTestID) %>%
+  dplyr::summarise(PhysSpeedSlut = mean(rollingSpeedMedian, na.rm=TRUE)#,
+                   #AlertType = "Physical Alert"
+                   ) %>%
+  right_join(test) %>%
+  arrange(rowNum)
+
+test <- test %>%
+  dplyr::mutate(PhysSpeedDiff = PhysSpeedSlut - PhysSpeedStart) %>%
+  mutate(PhysSpeedChange = ifelse(PhysSpeedDiff < 0, "Slowed Down After Physical Alert",
+                              ifelse(PhysSpeedDiff > 0, "Speeded Up After Physical Alert", NA)))
+
+test <- test %>%
+  dplyr::filter(TimeSinceAugDetStart > 0 & TimeSinceAugDetStart <= 0.1 &!is.na(TimeSinceAugDetStart)) %>%
+  dplyr::group_by(FOD, testID, objDetInTestID) %>%
+  dplyr::summarise(AugSpeedStart = mean(rollingSpeedMedian, na.rm=TRUE)#,
+                   #AlertType = "Augmented Alert"
+                   )  %>%
+  right_join(test) %>%
+  arrange(rowNum)
+
+test <- test %>%
+  filter(TimeSinceAugDetStart > 0.1 & TimeSinceAugDetStart < 1.3 &!is.na(TimeSinceAugDetStart)) %>%
+  dplyr::group_by(FOD, testID, objDetInTestID) %>%
+  dplyr::summarise(AugSpeedSlut = mean(rollingSpeedMedian, na.rm=TRUE)#,
+                   #AlertType = "Augmented Alert"
+                   ) %>%
+  right_join(test) %>%
+  arrange(rowNum)
+
+test <- test %>%
+  dplyr::mutate(AugSpeedDiff = AugSpeedSlut - AugSpeedStart) %>%
+  mutate(AugSpeedChange = ifelse(AugSpeedDiff < 0, "Slowed Down After Augmented Alert",
+                                 ifelse(AugSpeedDiff > 0, "Speeded Up After Augmented Alert", NA)))
+
+test %>%
+  filter(TimeSinceObjDetStart < 5 & TimeSinceObjDetStart > 0 & !is.na(AugSpeedChange)& !is.na(PhysSpeedChange)) %>%
+  ggplot(aes(
+    x = TimeSinceObjDetStart,
+    y = rollingSpeedMedian
+  )) +
+  geom_smooth(aes(colour = AugSpeedChange, linetype = PhysSpeedChange), se = F) +
+  theme_bw() +
+  ylab("Walking Speed (m/s)") +
+  xlab("Time Since Alert Onset (seconds)") +
   theme(
     legend.position = "bottom",
     axis.text.x = element_text(size = 14),
@@ -820,32 +2016,12 @@ dfp %>%
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     axis.line = element_line(colour = "black")
-  ) #+
-# scale_fill_identity(guide = 'legend') +
-# scale_colour_manual(name = NULL,
-#                    values =c('PhysicalAlerts'='#00AFBB','AugmentedAlerts'='#D16103'),
-#                    labels = c('Augmented Alerts','Physical Alerts')) #+
-# scale_color_discrete("") +
-# scale_shape_discrete("")
-
-#----- Percentage of Alert: Reduce walking speed -----
-
-SpeedAtDetStart
-
-dfp %>%
-  filter(TimeSinceObjDetStart < 0.51 & TimeSinceObjDetStart > 0.5) %>%
-  ggplot(aes(
-    x = TimeSinceObjDetStart,
-    y = rollingSpeedMedian
-  ))
-
-summary(lm(avgSpeed ~ objectDetected * FOD, data = dfpSumTestID))
-
-mean(dfp$ObjectDistance)
-sum(dfp$objDetStart)
+  ) +
+  scale_color_discrete("") +
+  scale_shape_discrete("")
 
 
-
+#### --------------------------------------------------------------------
 
 
 ## New analysis

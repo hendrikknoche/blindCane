@@ -209,7 +209,7 @@ dfp %<>%
   arrange(rowNum) %>% 
   relocate(CollGapDuration)
 
-# ------ Total Detection and effect on speed -------
+#------- Total Detection and effect on speed -------
 
 # Add consistentTimeline
 #dfp$ObjDetID <- cumsum(dfp$objDet + dfp$newTestStarts)
@@ -291,7 +291,7 @@ dfp %<>%
   arrange(rowNum) %>% 
   relocate(DetGapDuration)
 
-# ------ Physical detection and effect on speed -------
+#------- Physical detection and effect on speed -------
 
 #setup physical detection
 dfp %<>% dplyr::group_by(testID) %>% 
@@ -318,7 +318,7 @@ dfp %<>%
   arrange(rowNum) %>%
   dplyr::mutate(SpeedChangeFromPhysDetStart = rollingSpeedMedian - SpeedAtPhysDetStart) 
 
-# ------ Augmented detection and effect on speed -------
+#------- Augmented detection and effect on speed -------
 
 #setup augVibrations
 dfp %<>% dplyr::group_by(testID) %>% 
@@ -412,22 +412,34 @@ dfpSumTestID <- dfp %>%
 dfpSumTestID$totalTimeTraining<-round(cumsum(dfpSumTestID$Time))
 
 #add Coloum with total time spent for a given FOD with a given Range
-dfpSumTestID <- dfpSumTestID %>% group_by(ParticipantID)%>%mutate(TrainingByParticipant=round(cumsum(Time)))
+dfpSumTestID <- dfpSumTestID %>% 
+  group_by(ParticipantID)%>%
+  mutate(TrainingByParticipant=round(cumsum(Time)))
 
 #Add coloum with run number
-dfpSumTestID <- dfpSumTestID %>% group_by(ParticipantID) %>% mutate(RunNumber = 1:n())
+dfpSumTestID <- dfpSumTestID %>% 
+  group_by(ParticipantID) %>% 
+  mutate(RunNumber = 1:n())
 
 #add Coloum with total time spent for a given FOD with a given Range
-dfpSumTestID <- dfpSumTestID%>%group_by(FOD,day,Range)%>%mutate(timeFDRtrain=round(cumsum(Time)))
+dfpSumTestID <- dfpSumTestID %>%
+  group_by(FOD,day,Range) %>%
+  mutate(timeFDRtrain=round(cumsum(Time)))
 
 #add Coloum with total time spent for a given FOD with a given Range
-dfpSumTestID <- dfpSumTestID%>%group_by(FOD,day,Range)%>%mutate(timeFDRtrain=round(cumsum(Time)))
+dfpSumTestID <- dfpSumTestID %>%
+  group_by(FOD,day,Range) %>%
+  mutate(timeFDRtrain=round(cumsum(Time)))
 
 #add Coloum with total time spent for a given FOD
-dfpSumTestID <- dfpSumTestID%>%group_by(FOD,day)%>%mutate(timeFDtrain=round(cumsum(Time)))
+dfpSumTestID <- dfpSumTestID %>%
+  group_by(FOD,day) %>%
+  mutate(timeFDtrain=round(cumsum(Time)))
 
 #add Coloum with total time spent for a given Day
-dfpSumTestID <- dfpSumTestID%>%group_by(day)%>%mutate(timeDtrain=round(cumsum(Time)),totalTimeTrainingHrs=totalTimeTraining/3600)
+dfpSumTestID <- dfpSumTestID %>%
+  group_by(day) %>%
+  mutate(timeDtrain=round(cumsum(Time)),totalTimeTrainingHrs=totalTimeTraining/3600)
 
 #------- Save the grouped data -------
 # Make data frame into a .rda file for faster running time and to load it in other scripts

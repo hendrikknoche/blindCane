@@ -177,13 +177,13 @@ upper_ci <- function(mean, se, n, conf_level = 0.95){
 
 #Training Time
 daggByDFR <- dftSumTestID %>%
-  group_by(Range, day, FOD) %>%
-  summarize(totalTimeTraining = max(totalTimeTraining),
+  dplyr::group_by(Range, day, FOD) %>%
+  dplyr::summarize(totalTimeTraining = max(totalTimeTraining),
             newAvgSpeed = mean(avgSpeed),
             smean = mean(avgSpeed, na.rm = TRUE),
             ssd = sd(avgSpeed, na.rm = TRUE),
             count = n()) %>%
-  mutate(
+  dplyr::mutate(
     se = ssd / sqrt(count),
     lowerci = lower_ci(smean, se, count),
     upperci = upper_ci(smean, se, count))
@@ -217,12 +217,12 @@ ggplot(daggByDFR, aes(x = totalTimeTraining,
 
 #Number of Alerts
 daggDetectTrain <- dftSumTestID %>%
-  group_by(Range, FOD)%>%
-  summarise(avgObjDet = mean(objectDetected),
+  dplyr::group_by(Range, FOD)%>%
+  dplyr::summarise(avgObjDet = mean(objectDetected),
             smean = mean(objectDetected, na.rm = TRUE),
             ssd = sd(objectDetected, na.rm = TRUE),
             count = n()) %>%
-  mutate(
+  dplyr::mutate(
     se = ssd / sqrt(count),
     lowerci = lower_ci(smean, se, count),
     upperci = upper_ci(smean, se, count))
