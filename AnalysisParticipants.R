@@ -30,6 +30,8 @@ library(zoo)
 library(afex)
 library(emmeans)
 
+options("digits.secs"=6)
+
 #----- GetData -----
 
 # Load the data which was imported and cleaned by the "ImportBlindFoldedParticipants" script. 
@@ -367,20 +369,37 @@ test2 #Fuck... someone fucked up during the test
 
 test <- dfp %>%
   dplyr::filter(objDetStart == 1) %>%
-  dplyr::group_by(testID, FOD, Range) %>%
+  dplyr::group_by(testID, FOD) %>%
+  dplyr::select(ObjectDetected, rollingSpeedMedian) %>%
   dplyr::count(ObjectDetected) %>%
   dplyr::rename(NumberOfAlerts = n)
 
 test
 
 moreTest <- test %>%
-  dplyr::group_by(testID, FOD, Range) %>%
+  dplyr::group_by(testID, FOD) %>%
   dplyr::summarise(NumberOfObjDet = n(),
                    avgNumberOfAlerts = mean(NumberOfAlerts))
 
 moreTest
 
 summary(lm(NumberOfObjDet ~ FOD, data = moreTest)) 
+
+testSpeed <- dfp %>%
+  dplyr::group_by(testID, FOD) %>%
+  dplyr::summarise(avgSpeed = mean(rollingSpeedMedian, na.rm = TRUE))
+
+testSpeed
+
+godWork <- merge(x = moreTest, y = testSpeed, by = c("testID", "FOD"), all.x = TRUE)
+
+godWork
+
+summary(lm(avgSpeed ~ NumberOfObjDet, data = godWork)) 
+
+summary(lm(avgSpeed ~ avgNumberOfAlerts, data = godWork))
+
+summary(lm(avgSpeed ~ NumberOfObjDet + avgNumberOfAlerts, data = godWork))
 
 MeansTest <- moreTest %>%
   dplyr::group_by(FOD) %>%
@@ -393,50 +412,66 @@ MeansTest
 
 #----- Mean: Physical Alerts per obstacle -----
 
-test <- dfp %>%
+PhysAlertNumObj <- dfp %>%
   dplyr::filter(PhysDetStart == 1) %>%
-  dplyr::group_by(testID, FOD, Range) %>%
+  dplyr::group_by(testID, FOD, TimeSeconds) %>%
   dplyr::count(ObjectDetected) %>%
   dplyr::rename(NumberOfAlerts = n)
 
-test
+PhysAlertNumObj
 
-moreTest <- test %>%
+PhysAlertPerObj <- PhysAlertNumObj %>%
   dplyr::group_by(testID, FOD, Range) %>%
   dplyr::summarise(NumberOfObjDet = n(),
                    avgNumberOfAlerts = mean(NumberOfAlerts))
 
-moreTest
+PhysAlertPerObj
 
-summary(lm(NumberOfObjDet ~ FOD, data = moreTest)) 
+summary(lm(NumberOfObjDet ~ FOD, data = PhysAlertPerObj)) 
 
-MeansTest <- moreTest %>%
+PhysAlertPerObjWithSpeed <- merge(x = PhysAlertPerObj, y = testSpeed, by = c("testID", "FOD"), all.x = TRUE)
+
+PhysAlertPerObjWithSpeed
+
+
+summary(lm(avgSpeed ~ NumberOfObjDet + avgNumberOfAlerts, data = PhysAlertPerObjWithSpeed)) 
+
+MeansPhysAlertPerObj <- PhysAlertPerObj %>%
   dplyr::group_by(FOD) %>%
   dplyr::summarise(avgNumberOfObjDet = mean(NumberOfObjDet),
                    sdNumberOfObjDet = sd(NumberOfObjDet),
-                   NumberOfAlerts = mean(avgNumberOfAlerts),
+                   avgNumberOfAlertsPerObj = mean(avgNumberOfAlerts),
                    sdNumberOfAlerts = sd(avgNumberOfAlerts))
 
-MeansTest
+MeansPhysAlertPerObj
 
 #----- Mean: Augmented Alerts per obstacle -----
 
-test <- dfp %>%
+AugAlertNumObj <- dfp %>%
   dplyr::filter(AugDetStart == 1) %>%
-  dplyr::group_by(testID, FOD, Range) %>%
+  dplyr::group_by(testID, FOD) %>%
   dplyr::count(ObjectDetected) %>%
   dplyr::rename(NumberOfAlerts = n)
 
-test
+AugAlertNumObj
 
-moreTest <- test %>%
-  dplyr::group_by(testID, FOD, Range) %>%
+AugAlertPerObj <- AugAlertNumObj %>%
+  dplyr::group_by(testID, FOD) %>%
   dplyr::summarise(NumberOfObjDet = n(),
                    avgNumberOfAlerts = mean(NumberOfAlerts))
 
-moreTest
+AugAlertPerObj
 
-summary(lm(NumberOfObjDet ~ FOD, data = moreTest)) 
+summary(lm(NumberOfObjDet ~ FOD, data = AugAlertPerObj)) 
+summary(lm(avgNumberOfAlerts ~ FOD, data = AugAlertPerObj)) 
+
+
+PhysAugAlertPerObjWithSpeed <- merge(x = PhysAlertPerObj, y = testSpeed, by = c("testID", "FOD"), all.x = TRUE)
+
+PhysAugAlertPerObjWithSpeed
+
+
+summary(lm(avgSpeed ~ NumberOfObjDet + avgNumberOfAlerts, data = PhysAugAlertPerObjWithSpeed)) 
 
 MeansTest <- moreTest %>%
   dplyr::group_by(FOD) %>%
@@ -446,6 +481,123 @@ MeansTest <- moreTest %>%
                    sdNumberOfAlerts = sd(avgNumberOfAlerts))
 
 MeansTest
+
+#----- Mean: Augmented and Physical Alerts per obstacle -----
+
+PhysAlertObjects <- dfp %>%
+  dplyr::filter(PhysDetStart == 1) %>%
+  dplyr::group_by(ParticipantID, testID, FOD, Range) %>%
+  dplyr::count(ObjectDetected) %>%
+  dplyr::rename(NumberOfPhysAlertsPerObj = n) 
+
+sumPhysAlertObjects <- PhysAlertObjects %>%
+  dplyr::group_by(ParticipantID, testID, FOD, Range) %>%
+  dplyr::summarise(NumberOfObjPhysDet = n(),
+                   avgNumberOfPhysAlertsPerObj = mean(NumberOfPhysAlertsPerObj))
+
+AugAlertObjects <- dfp %>%
+  dplyr::filter(AugDetStart == 1) %>%
+  dplyr::group_by(ParticipantID,testID, FOD, Range) %>%
+  dplyr::count(ObjectDetected) %>%
+  dplyr::rename(NumberOfAugAlertsPerObj = n)
+
+sumAugAlertObjects <- AugAlertObjects %>%
+  dplyr::group_by(ParticipantID, testID, FOD, Range) %>%
+  dplyr::summarise(NumberOfObjAugDet = n(),
+                   avgNumberOfAugAlertsPerObj = mean(NumberOfAugAlertsPerObj))
+
+AlertsPerObstacle <- merge(sumPhysAlertObjects, sumAugAlertObjects, all=TRUE)
+
+AlertsPerObstacle[is.na(AlertsPerObstacle)] <- 0
+
+AlertsPerObstacle <- merge(dfpSumTestID, AlertsPerObstacle, all=TRUE)
+
+AlertsPerObstacle[is.na(AlertsPerObstacle)] <- 0
+
+summary(lm(avgSpeed ~ NumberOfObjPhysDet + NumberOfObjAugDet, data = AlertsPerObstacle)) 
+
+summary(lm(avgSpeed ~ avgNumberOfPhysAlertsPerObj + avgNumberOfAugAlertsPerObj, data = AlertsPerObstacle)) 
+
+summary(lm(avgSpeed ~ objectCollisions + NumberOfObjPhysDet + avgNumberOfPhysAlertsPerObj + NumberOfObjAugDet + avgNumberOfAugAlertsPerObj, data = AlertsPerObstacle)) 
+
+summary(lm(avgSpeed ~ FOD * (NumberOfObjPhysDet + NumberOfObjAugDet), data = AlertsPerObstacle)) 
+
+# Making the NULL model, only including participants
+WS.Power.Part <- lmer(avgSpeed ~ 1 +
+                        (1 | ParticipantID),
+                      data = AlertsPerObstacle, REML = FALSE )
+
+confint(WS.Power.Part)
+r.squaredGLMM(WS.Power.Part) 
+
+# add scenario
+WS.Power.Phys.Part <- lmer(log(avgSpeed) ~ NumberOfObjPhysDet +
+                             (1 | ParticipantID),
+                           data = AlertsPerObstacle, REML = FALSE)
+
+r.squaredGLMM(WS.Power.Phys.Part) 
+
+# significant - yes
+anova(WS.Power.Part, WS.Power.Phys.Part)
+
+# Add number of alerts 
+WS.Power.Phys.Aug.Part <- lmer(log(avgSpeed) ~ NumberOfObjPhysDet + NumberOfObjAugDet +
+                             (1 | ParticipantID),
+                           data = AlertsPerObstacle, REML = FALSE)
+
+r.squaredGLMM(WS.Power.Phys.Aug.Part) 
+summary(WS.Power.Phys.Aug.Part)
+
+# significant - yes
+anova(WS.Power.Phys.Aug.Part, WS.Power.Phys.Part)
+
+# Add number of alerts 
+WS.Power.Phys.Per.Aug.Part <- lmer(log(avgSpeed) ~ NumberOfObjPhysDet + avgNumberOfPhysAlertsPerObj + NumberOfObjAugDet + 
+                                 (1 | ParticipantID),
+                               data = AlertsPerObstacle, REML = FALSE)
+
+r.squaredGLMM(WS.Power.Phys.Per.Aug.Part) 
+summary(WS.Power.Phys.Per.Aug.Part)
+
+# significant - yes
+anova(WS.Power.Phys.Per.Aug.Part, WS.Power.Phys.Aug.Part)
+
+# Add number of alerts 
+WS.Power.Phys.Per.Aug.Per.Part <- lmer(log(avgSpeed) ~ NumberOfObjPhysDet + avgNumberOfPhysAlertsPerObj + NumberOfObjAugDet + avgNumberOfAugAlertsPerObj +
+                                     (1 | ParticipantID),
+                                   data = AlertsPerObstacle, REML = FALSE)
+
+r.squaredGLMM(WS.Power.Phys.Per.Aug.Per.Part) 
+summary(WS.Power.Phys.Per.Aug.Per.Part)
+
+# significant - yes
+anova(WS.Power.Phys.Per.Aug.Per.Part, WS.Power.Phys.Per.Aug.Part)
+
+# Add number of alerts 
+WS.Power.Coll.Phys.Per.Aug.Per.Part <- lmer(avgSpeed ~ objectCollisions + NumberOfObjPhysDet + avgNumberOfPhysAlertsPerObj + NumberOfObjAugDet + avgNumberOfAugAlertsPerObj +
+                                         (1 | ParticipantID),
+                                       data = AlertsPerObstacle, REML = FALSE)
+
+
+exp(coef(WS.Power.Coll.Phys.Per.Aug.Per.Part)["NumberOfObjPhysDet"] - 1) * 100
+
+
+testlmResiduals <- resid(lm(avgSpeed ~ objectCollisions, data = AlertsPerObstacle))
+
+# Plot the residuals - should (ish) have the same amount above and below the line without any clear pattern
+plot(AlertsPerObstacle$avgSpeed, testlmResiduals) + abline(0,0) # Could be a lot better the bottom of the line is ot heavy
+
+lmmResiduals <- resid(WS.Power.Coll.Phys.Per.Aug.Per.Part)
+
+# Plot the residuals - should (ish) have the same amount above and below the line without any clear pattern
+plot(AlertsPerObstacle$avgSpeed, lmmResiduals) + abline(0,0) # Could be a lot better the bottom of the line is ot heavy
+
+r.squaredGLMM(WS.Power.Coll.Phys.Per.Aug.Per.Part) 
+summary(WS.Power.Coll.Phys.Per.Aug.Per.Part)
+VarCorr(WS.Power.Coll.Phys.Per.Aug.Per.Part)
+
+# significant - yes
+anova(WS.Power.Coll.Phys.Per.Aug.Per.Part, WS.Power.Phys.Per.Aug.Per.Part)
 
 #----- Mean: Walking speed -----
 
@@ -456,6 +608,7 @@ sd(dfpSumTestID$avgSpeed)
 meanAvgWalkingSpeed <- dfpSumTestID %>%
   dplyr::group_by(FOD) %>%
   dplyr::summarise(mean(avgSpeed),
+                   median(avgSpeed),
                    sd(avgSpeed))
 
 meanAvgWalkingSpeed
@@ -465,7 +618,19 @@ summary(lm(avgSpeed ~ FOD, data = dfpSumTestID))
 
 summary(lm(log(avgSpeed) ~ objectDetected, data = dfpSumTestID)) 
 
+summary(lm(avgSpeed ~ physObjectDetected + augObjectDetected, data = dfpSumTestID)) 
+
+summary(lm(avgSpeed ~ physObjectDetected * augObjectDetected, data = dfpSumTestID)) 
+
 summary(lm(log(avgSpeed) ~ FOD*Range, data = dfpSumTestID)) 
+
+
+
+
+summary(lm(avgSpeed ~ objectCollisions + physObjectDetected + augObjectDetected, data = dfpSumTestID)) 
+
+
+
 
 TunnelWalkingSpeed <- dfpSumTestID[!(dfpSumTestID$FOD=="Conical View AWC"),]
 summary(lm(log(avgSpeed) ~ FOD*Range, data = TunnelWalkingSpeed)) 
@@ -483,7 +648,7 @@ upper_ci <- function(mean, se, n, conf_level = 0.95){
 
 #Plot walking speed per condition
 dfpdaggSpeedTrain <- dfpSumTestID %>%
-  dplyr::group_by(Range, FOD) %>%
+  dplyr::group_by(Range, FOD, ParticipantID) %>%
   dplyr::summarise(newAvgSpeed = mean(avgSpeed),
             smean = mean(avgSpeed, na.rm = TRUE),
             ssd = sd(avgSpeed, na.rm = TRUE),
@@ -533,14 +698,150 @@ ggplot(data = dfpdaggSpeedTrain, aes(x = Range,
   scale_color_discrete("") +
   scale_shape_discrete("")
 
+#----- Mean: Walking speed Alert Start -----
+  
+# Total Mean Walking Speed
+mean(dfpSumTestID$avgSpeed)
+sd(dfpSumTestID$avgSpeed)
+  
+meanAvgWalkingSpeedAlertStart <- dfp %>%
+  dplyr::filter(objDetStart == 1) %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::summarise(mean(rollingSpeedMedian),
+                     sd(rollingSpeedMedian))
+  
+meanAvgWalkingSpeedAlertStart
 
 #----- Mean: Collisions -----
 
 mean(dfpSumTestID$objectCollisions)
 sd(dfpSumTestID$objectCollisions)
 
+meanCollisions <- dfpSumTestID %>%
+  group_by(FOD) %>%
+  dplyr::summarise(meanCollisions = mean(objectCollisions),
+                   sdCollision = sd(objectCollisions))
 
-summary(lm(objectCollisions ~ objectDetected*FOD, data = dfpSumTestID)) 
+meanCollisions
+
+summary(lm(objectCollisions ~ FOD, data = dfpSumTestID)) 
+
+
+summary(lm(objectCollisions ~ physObjectDetected + augObjectDetected, data = dfpSumTestID)) 
+
+#----- Mean: Collisions per Obstacle -----
+
+# Number of obstacles collided with
+CollNumObj <- dfp %>%
+  dplyr::filter(objCollStart == 1) %>%
+  dplyr::group_by(testID, FOD, TimeSeconds) %>%
+  dplyr::count(ObjectCollision) %>%
+  dplyr::rename(NumberOfColl = n) %>% 
+  dplyr::summarise(avgSpeed = mean(rollingSpeedMedian))
+
+CollNumObj
+
+# Number of collisions per obstacle 
+CollPerObj <- CollNumObj %>%
+  dplyr::group_by(testID, FOD) %>%
+  dplyr::summarise(NumberOfObjColl = n(),
+                   avgNumberOfColl = mean(NumberOfColl))
+
+CollPerObj
+
+summary(lm(NumberOfObjColl ~ FOD, data = CollPerObj)) 
+
+summary(lm(avgNumberOfColl ~ FOD, data = CollPerObj)) 
+
+MeansCollPerObj <- CollPerObj %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::summarise(avgNumberOfObjColl = mean(NumberOfObjColl),
+                   sdNumberOfObjColl = sd(NumberOfObjColl),
+                   avgNumberOfCollPerObj = mean(avgNumberOfColl),
+                   sdNumberOfColl = sd(avgNumberOfColl))
+
+MeansCollPerObj
+
+#----- Mean: Collisions and Physical Alerts -----
+
+# how many of the collisions was the user alerted to just before the collision?
+PhysAlertBeforeColl <- dfp %>%
+  dplyr::group_by(ParticipantID, FOD) %>%
+  dplyr::filter(objCollStart == 1) %>% 
+  dplyr::select(ObjectCollision, LastObjPhysDet) %>%
+  dplyr::mutate(NumberColl = 1:n(),
+                TotalNumberColl = max(NumberColl)) %>%
+  dplyr::filter(ObjectCollision == LastObjPhysDet) %>% 
+  dplyr::mutate(NumberPhysBeforeColl = 1:n(), 
+                TotalNumberPhysBeforeColl = max(NumberPhysBeforeColl)) %>%
+  dplyr::summarise(ProcentagePhysBeforeColl = mean(TotalNumberPhysBeforeColl / TotalNumberColl * 100),
+                   NumberOfColl = max(TotalNumberColl)) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::summarise(ProcentagePhysBeforeColl = mean(ProcentagePhysBeforeColl))
+
+PhysAlertBeforeColl 
+
+PhysAlertBeforeColl %>%
+  ggplot(aes(x = ProcentagePhysBeforeColl, color = FOD)) +
+  geom_density() +
+  theme_classic()
+  
+# coll and alerts per obstacle
+
+alertsAndCollPerObj <- merge(MeansPhysAlertPerObj, MeansCollPerObj, by="FOD")
+
+alertsAndCollPerObj <- alertsAndCollPerObj[ , -which(names(alertsAndCollPerObj) %in% c("sdNumberOfObjColl","sdNumberOfColl","sdNumberOfObjDet","sdNumberOfAlerts"))]
+
+alertsAndCollPerObj
+
+alertsAndCollPerObj %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::summarise(ProcentagePhysDetVSColl = mean(avgNumberOfObjColl  / avgNumberOfObjDet  * 100),
+                   ProcentageNumPhysDetVSNumColl = mean(avgNumberOfCollPerObj / avgNumberOfAlertsPerObj  * 100))
+
+
+# Prev alerted obstacles
+
+abc <- PhysAlertNumObj %>%
+  dplyr::rename(PhysAlertTime = "TimeSeconds",
+         ObjPhysAlertedTo = "ObjectDetected",
+         NumberOfAlertsPerObj = "NumberOfAlerts")
+
+abcd <- CollNumObj %>%
+  dplyr::rename(CollTime = "TimeSeconds",
+                ObjCollWith = "ObjectCollision",
+                NumberOfCollPerObj = "NumberOfColl")
+
+test1 <- merge(PhysAlertNumObj, CollNumObj, all=TRUE) %>%
+  arrange(testID)
+
+test2 <- test1 %>%
+  group_by(testID, FOD) %>%
+  mutate(CollAlertedTo = ifelse(ObjectCollision == lag(ObjectDetected), "Alerted to",
+                                   ifelse(ObjectCollision != lag(ObjectDetected), "Not Alerted to", NA))) %>%
+  ungroup()
+
+test2
+
+test2 %>%
+  group_by(FOD) %>%
+  count(CollAlertedTo, na.rm = TRUE)
+
+#----- Mean: Collisions and Augmented Alerts -----
+
+AugAlertBeforeColl <- dfp %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::filter(objCollStart == 1) %>% 
+  dplyr::select(ObjectCollision, LastObjAugDet) %>%
+  dplyr::mutate(NumberColl = 1:n(),
+                TotalNumberColl = max(NumberColl)) %>%
+  dplyr::filter(ObjectCollision == LastObjAugDet) %>% 
+  dplyr::mutate(NumberAugBeforeColl = 1:n(), 
+                TotalNumberAugBeforeColl = max(NumberAugBeforeColl)) %>%
+  dplyr::summarise(ProcentageAugBeforeColl = mean(TotalNumberAugBeforeColl/TotalNumberColl*100))
+
+AugAlertBeforeColl
 
 #----- Transforming Data and testing for normality -----
 
@@ -669,7 +970,7 @@ qqPlot(lmExponentialResiduals) # looks good - a bit towards the end
 # Test for normality
 shapiro.test(lmExponentialResiduals) # close to not be rejected so not too good not too bad
 
-### Summery : A logged linear function is close to normally distributed R2 = 0.27
+### Summery : A logged linear function is close to normally distributed. R2 = 0.27
 
 # Mixed Exponential function
 
@@ -1447,7 +1748,7 @@ SlowedDown <- SpeedAtandAfterAlert %>%
   dplyr::mutate(ProcentageSpeedDrop = NumberOfAlertSpeedDown / TotalNumberOfAlert * 100,
                 SDProcentageSpeedDrop = sd(ProcentageSpeedDrop)) 
 
-view(SlowedDown)
+SlowedDown
 
 SpeedUp <- SpeedAtandAfterAlert %>%
   filter(SpeedDiff > 0) %>%
@@ -1515,7 +1816,7 @@ test %>%
   scale_color_discrete("") +
   scale_shape_discrete("")
 
-h
+
 #----- Plot Alert Cost: Per AWC and Range -----
 dfp %>%
   # filter(TimeSinceObjDetStart < 5 & TimeSinceObjDetStart > 0) %>%
@@ -1733,6 +2034,24 @@ testPhysAug %>%
   geom_smooth(aes(
     x = TimeSincePhysDetStart,
     y = rollingSpeedMedian,
+  #  color =  as.factor(ParticipantID),
+    group = as.factor(ParticipantID)
+  ),
+  color = "gray",
+  se = F
+  ) +
+  geom_smooth(aes(
+    x = TimeSinceAugDetStart,
+    y = rollingSpeedMedian,
+  #  color =  as.factor(ParticipantID),
+    group = as.factor(ParticipantID)
+  ),
+  color = "gray",
+  se = F
+  ) +
+  geom_smooth(aes(
+    x = TimeSincePhysDetStart,
+    y = rollingSpeedMedian,
     linetype = as.factor(PhysSpeedChange),
     color = "Kinetic Alerts"
   ),
@@ -1742,7 +2061,7 @@ testPhysAug %>%
     x = TimeSinceAugDetStart,
     y = rollingSpeedMedian,
     linetype = as.factor(AugSpeedChange),
-    color = FOD#"Vibration Alerts"
+    color = "Vibration Alerts"
   ),
   se = F
   ) +
@@ -1766,11 +2085,7 @@ testPhysAug %>%
   ) +
   guides(linetype=FALSE)
 
-#----- How Much and How Often - Alert Cost: Phys vs Aug -----
-
-#_________________________________________________________________________________________________________________
-# Physical Alerts
-#_________________________________________________________________________________________________________________
+#----- How Much and How Often - Alert Cost: Phys -----
 
 #_______________________________________________________________________________________________________
 # Overall Avg for walking speed at physical alert start and after 1.2 of an alert
@@ -1855,9 +2170,7 @@ PhysSpeedUp <- PhysSpeedAtandAfterAlert %>%
 
 PhysSpeedUp
 
-#_________________________________________________________________________________________________________________
-# Augmented Alerts
-#_________________________________________________________________________________________________________________
+#----- How Much and How Often - Alert Cost: Aug -----
 
 #_______________________________________________________________________________________________________
 # Overall Avg for walking speed at augmented alert start and after 1.2 of an alert
@@ -1897,7 +2210,8 @@ AugAvgWalkingSpeed
 AugSpeedStart <- dfp %>%
   dplyr::filter(TimeSinceAugDetStart > 0 & TimeSinceAugDetStart < 0.1 &!is.na(TimeSinceAugDetStart)) %>%
   dplyr::group_by(FOD, testID, objDetInTestID) %>%
-  dplyr::summarise(AugSpeedStart = mean(rollingSpeedMedian, na.rm=TRUE))
+  dplyr::summarise(AugSpeedStart = mean(rollingSpeedMedian, na.rm=TRUE),
+                   GapDuration = max(TimeSinceObjDetStart))
 
 mean(AugSpeedStart$AugSpeedStart)
 
@@ -1944,6 +2258,189 @@ AugSpeedUp <- AugSpeedAtandAfterAlert %>%
   dplyr::mutate(ProcentageSpeedUp = NumberOfAugAlertSpeedUp/TotalNumberOfAugAlert*100)
 
 AugSpeedUp
+
+
+PhysSlowedDown
+AugSlowedDown
+PhysSpeedUp
+AugSpeedUp
+
+#----- How Much and How Often - Alert Cost: Phys vs Aug -----
+
+PhysTest2 <- dfp %>%
+  dplyr::group_by(testID, ParticipantID, FOD) %>%
+  dplyr::mutate(LagTimeSinceStart = dplyr::lag(TimeSinceObjDetStart))
+
+#Speed at Physical alert start
+PhysSpeedStart <- PhysTest2 %>%
+  dplyr::filter(TimeSincePhysDetStart > 0 & TimeSincePhysDetStart < 0.1 &!is.na(TimeSincePhysDetStart)) %>%
+  dplyr::group_by(testID, ParticipantID, FOD, objDetInTestID) %>%
+  dplyr::summarise(PhysSpeedStart = mean(rollingSpeedMedian, na.rm=TRUE),
+                   TimeSinceLastAlert = max(LagTimeSinceStart)) 
+
+#Speed at Physical alert after 1.2s
+PhysSpeedSlut <- dfp %>%
+  filter(TimeSincePhysDetStart > 1.2 & TimeSincePhysDetStart < 1.3 &!is.na(TimeSincePhysDetStart)) %>%
+  dplyr::group_by(FOD, testID, objDetInTestID) %>%
+  dplyr::summarise(PhysSpeedSlut = mean(rollingSpeedMedian, na.rm=TRUE))
+
+
+# difference in speed at and after physical alerts 
+PhysSpeedAtandAfterAlert <- merge(PhysSpeedStart, PhysSpeedSlut)
+
+PhysSpeedAtandAfterAlert <- PhysSpeedAtandAfterAlert %>%
+  dplyr::mutate(PhysSpeedDiff = PhysSpeedSlut - PhysSpeedStart) %>%
+  group_by(FOD) %>%
+  dplyr::mutate(TotalNumberOfPhysAlert = max(1:n()))
+
+PhysSlowedDown <- PhysSpeedAtandAfterAlert %>%
+  filter(PhysSpeedDiff < 0) %>%
+  group_by(FOD) %>%
+  dplyr::mutate(NumberOfPhysAlertSpeedDown = 1:n())  %>%
+  dplyr::summarise(PhysSpeedStart = mean(PhysSpeedStart),
+                   MedianGap = median(TimeSinceLastAlert, na.rm=TRUE),
+                   PhysSpeedSlut = mean(PhysSpeedSlut),
+                   PhysAvgSpeedDown = mean(PhysSpeedDiff),
+                   sdSpeedDown = sd(PhysSpeedDiff),
+                   TotalNumberOfPhysAlert = max(TotalNumberOfPhysAlert),
+                   NumberOfPhysAlertSpeedDown = max(NumberOfPhysAlertSpeedDown)) %>%
+  dplyr::mutate(ProcentageSpeedDrop = NumberOfPhysAlertSpeedDown / TotalNumberOfPhysAlert * 100) 
+
+PhysSlowedDown
+
+PhysSpeedUp <- PhysSpeedAtandAfterAlert %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::filter(PhysSpeedDiff > 0) %>%
+  dplyr::mutate(NumberOfPhysAlertSpeedUp = 1:n())  %>%
+  dplyr::summarise(PhysSpeedStart = mean(PhysSpeedStart),
+                   MedianGap = median(TimeSinceLastAlert, na.rm=TRUE),
+                   PhysSpeedSlut = mean(PhysSpeedSlut),
+                   PhysAvgSpeedUp = mean(PhysSpeedDiff),
+                   medianSpeedUp  = median(PhysSpeedDiff),
+                   sdSpeedUp = sd(PhysSpeedDiff),
+                   TotalNumberOfPhysAlert = max(TotalNumberOfPhysAlert),
+                   NumberOfPhysAlertSpeedUp = max(NumberOfPhysAlertSpeedUp)) %>%
+  dplyr::mutate(ProcentageSpeedUp = NumberOfPhysAlertSpeedUp/TotalNumberOfPhysAlert*100)
+
+PhysSpeedUp
+
+PhysSlowedDown1 <- PhysSpeedAtandAfterAlert %>%
+  dplyr::mutate(BigGap = ifelse(TimeSinceLastAlert > 2, "Big Gap", "Small Gap")) %>%
+  filter(PhysSpeedDiff < 0) %>%
+  group_by(FOD, BigGap) %>%
+  dplyr::mutate(NumberOfPhysAlertSpeedDown = 1:n())  %>%
+  dplyr::summarise(PhysSpeedStart = mean(PhysSpeedStart),
+                   MedianGap = median(TimeSinceLastAlert, na.rm=TRUE),
+                   PhysSpeedSlut = mean(PhysSpeedSlut),
+                   PhysAvgSpeedDown = mean(PhysSpeedDiff),
+                   sdSpeedDown = sd(PhysSpeedDiff),
+                   TotalNumberOfPhysAlert = max(TotalNumberOfPhysAlert),
+                   NumberOfPhysAlertSpeedDown = max(NumberOfPhysAlertSpeedDown)) %>%
+  dplyr::mutate(ProcentageSpeedDrop = NumberOfPhysAlertSpeedDown / TotalNumberOfPhysAlert * 100) 
+
+PhysSlowedDown1
+
+PhysSpeedUp1 <- PhysSpeedAtandAfterAlert %>%
+  dplyr::mutate(BigGap = ifelse(TimeSinceLastAlert > 2, "Big Gap", "Small Gap")) %>%
+  dplyr::group_by(FOD, BigGap) %>%
+  dplyr::filter(PhysSpeedDiff > 0) %>%
+  dplyr::mutate(NumberOfPhysAlertSpeedUp = 1:n())  %>%
+  dplyr::summarise(PhysSpeedStart = mean(PhysSpeedStart),
+                   MedianGap = median(TimeSinceLastAlert, na.rm=TRUE),
+                   PhysSpeedSlut = mean(PhysSpeedSlut),
+                   PhysAvgSpeedUp = mean(PhysSpeedDiff),
+                   medianSpeedUp  = median(PhysSpeedDiff),
+                   sdSpeedUp = sd(PhysSpeedDiff),
+                   TotalNumberOfPhysAlert = max(TotalNumberOfPhysAlert),
+                   NumberOfPhysAlertSpeedUp = max(NumberOfPhysAlertSpeedUp)) %>%
+  dplyr::mutate(ProcentageSpeedUp = NumberOfPhysAlertSpeedUp/TotalNumberOfPhysAlert*100)
+
+PhysSpeedUp1
+
+#Speed at Augmented alert start
+AugSpeedStart <- PhysTest2 %>%
+  dplyr::filter(TimeSinceAugDetStart > 0 & TimeSinceAugDetStart < 0.1 &!is.na(TimeSinceAugDetStart)) %>%
+  dplyr::group_by(testID, ParticipantID, FOD, Range, objDetInTestID) %>%
+  dplyr::summarise(AugSpeedStart = mean(rollingSpeedMedian, na.rm=TRUE),
+                   TimeSinceLastAlert = max(LagTimeSinceStart))
+
+#mean(AugSpeedStart$AugSpeedStart)
+
+#Speed at augmented alert after 1.2s
+AugSpeedSlut <- dfp %>%
+  filter(TimeSinceAugDetStart > 1.2 & TimeSinceAugDetStart < 1.3 &!is.na(TimeSinceAugDetStart)) %>%
+  dplyr::group_by(FOD, testID, objDetInTestID) %>%
+  dplyr::summarise(AugSpeedSlut = mean(rollingSpeedMedian, na.rm=TRUE))
+
+#mean(AugSpeedSlut$AugSpeedSlut)
+
+# difference in speed at and after augmented alerts 
+AugSpeedAtandAfterAlert <- merge(AugSpeedStart, AugSpeedSlut)
+
+AugSpeedAtandAfterAlert <- AugSpeedAtandAfterAlert %>%
+  dplyr::mutate(AugSpeedDiff = AugSpeedSlut - AugSpeedStart) %>%
+  group_by(FOD) %>%
+  dplyr::mutate(TotalNumberOfAugAlert = max(1:n()))
+
+AugSlowedDown <- AugSpeedAtandAfterAlert %>%
+  filter(AugSpeedDiff < 0) %>%
+  group_by(FOD) %>%
+  dplyr::mutate(NumberOfAugAlertSpeedDown = 1:n())  %>%
+  dplyr::summarise(AugSpeedStart = mean(AugSpeedStart),
+                   MedianGap = median(TimeSinceLastAlert, na.rm=TRUE),
+                   AugSpeedSlut = mean(AugSpeedSlut),
+                   AvgSpeedDown = mean(AugSpeedDiff),
+                   sdSpeedDown = sd(AugSpeedDiff),
+                   TotalNumberOfAugAlert = max(TotalNumberOfAugAlert),
+                   NumberOfAugAlertSpeedDown = max(NumberOfAugAlertSpeedDown)) %>%
+  dplyr::mutate(ProcentageSpeedDrop = NumberOfAugAlertSpeedDown / TotalNumberOfAugAlert * 100) 
+
+AugSlowedDown
+
+AugSpeedUp <- AugSpeedAtandAfterAlert %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::filter(AugSpeedDiff > 0) %>%
+  dplyr::mutate(NumberOfAugAlertSpeedUp = 1:n())  %>%
+  dplyr::summarise(AugSpeedStart = mean(AugSpeedStart),
+                   MedianGap = median(TimeSinceLastAlert, na.rm=TRUE),
+                   AugSpeedSlut = mean(AugSpeedSlut),
+                   AvgSpeedUp = mean(AugSpeedDiff),
+                   sdSpeedUp = sd(AugSpeedDiff),
+                   TotalNumberOfAugAlert = max(TotalNumberOfAugAlert),
+                   NumberOfAugAlertSpeedUp = max(NumberOfAugAlertSpeedUp)) %>%
+  dplyr::mutate(ProcentageSpeedUp = NumberOfAugAlertSpeedUp/TotalNumberOfAugAlert*100)
+
+AugSpeedUp
+
+AugSlowedDown1 <- AugSpeedAtandAfterAlert %>%
+  dplyr::mutate(BigGap = ifelse(TimeSinceLastAlert > 2, "Big Gap", "Small Gap")) %>%
+  filter(AugSpeedDiff < 0) %>%
+  group_by(FOD, BigGap) %>%
+  dplyr::mutate(NumberOfAugAlertSpeedDown = 1:n())  %>%
+  dplyr::summarise(AugSpeedStart = mean(AugSpeedStart),
+                   AugSpeedSlut = mean(AugSpeedSlut),
+                   AvgSpeedDown = mean(AugSpeedDiff),
+                   sdSpeedDown = sd(AugSpeedDiff),
+                   TotalNumberOfAugAlert = max(TotalNumberOfAugAlert),
+                   NumberOfAugAlertSpeedDown = max(NumberOfAugAlertSpeedDown)) %>%
+  dplyr::mutate(ProcentageSpeedDrop = NumberOfAugAlertSpeedDown / TotalNumberOfAugAlert * 100) 
+
+AugSlowedDown1
+
+AugSpeedUp1 <- AugSpeedAtandAfterAlert %>%
+  dplyr::mutate(BigGap = ifelse(TimeSinceLastAlert > 2, "Big Gap", "Small Gap")) %>%
+  dplyr::group_by(FOD, BigGap) %>%
+  dplyr::filter(AugSpeedDiff > 0) %>%
+  dplyr::mutate(NumberOfAugAlertSpeedUp = 1:n())  %>%
+  dplyr::summarise(AugSpeedStart = mean(AugSpeedStart),
+                   AugSpeedSlut = mean(AugSpeedSlut),
+                   AvgSpeedUp = mean(AugSpeedDiff),
+                   sdSpeedUp = sd(AugSpeedDiff),
+                   TotalNumberOfAugAlert = max(TotalNumberOfAugAlert),
+                   NumberOfAugAlertSpeedUp = max(NumberOfAugAlertSpeedUp)) %>%
+  dplyr::mutate(ProcentageSpeedUp = NumberOfAugAlertSpeedUp/TotalNumberOfAugAlert*100)
+
+AugSpeedUp1
 
 #----- Plot Alert Cost: Phys vs Aug Split increase and decrease  (cleaned for paper) -----
 

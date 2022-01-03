@@ -300,13 +300,25 @@ dfp %<>% dplyr::group_by(testID) %>%
                 PhysDetStop = ifelse(PhysDetOngoing == 1 & dplyr::lead(PhysDetOngoing) == 0, 1, 0),
                 PhysDetInTestID = cumsum(PhysDetStart),
                 PhysDetGapInTestID = cumsum(PhysDetStop)) %>%
-  dplyr::group_by(testID,PhysDetInTestID) %>%
+  dplyr::group_by(testID, PhysDetInTestID) %>%
   dplyr::mutate(TimeSincePhysDetStart = cumsum(TimeSincePrevRow),
-                TimeSincePhysDetStart = ifelse(PhysDetInTestID==0,NA,TimeSincePhysDetStart))%>%
-  dplyr::group_by(testID,PhysDetGapInTestID) %>%
+                TimeSincePhysDetStart = ifelse(PhysDetInTestID == 0, NA, TimeSincePhysDetStart)) %>%
+  dplyr::group_by(testID, PhysDetGapInTestID) %>%
   dplyr::mutate(TimeSincePhysDetStop = cumsum(TimeSincePrevRow),
-                TimeSincePhysDetStop = ifelse(PhysDetGapInTestID==0,NA,TimeSincePhysDetStop))%>%
+                TimeSincePhysDetStop = ifelse(PhysDetGapInTestID == 0, NA, TimeSincePhysDetStop)) %>%
   ungroup()
+
+#Track the last detected obstacle
+LastObstaclePhysDetected <- dfp %>% 
+  dplyr::group_by(testID, PhysDetInTestID) %>% 
+  dplyr::filter(ObjectDetected != "") %>%
+  dplyr::summarise(LastObjPhysDet = ObjectDetected)  %>% 
+  filter(!(PhysDetInTestID == lead(PhysDetInTestID) & testID == lead(testID)) | is.na(lead(PhysDetInTestID)))
+  
+dfp <- merge(dfp, LastObstaclePhysDetected, by=c("testID","PhysDetInTestID"), all=T) %>%
+  arrange(rowNum)
+
+remove(LastObstaclePhysDetected)
 
 # create speed changes from physDetstart
 dfp %<>% 
@@ -326,14 +338,26 @@ dfp %<>% dplyr::group_by(testID) %>%
                 AugDetStart = ifelse(AugDetOngoing == 1 & dplyr::lag(AugDetOngoing) == 0 , 1, 0),
                 AugDetStop = ifelse(AugDetOngoing == 1 & dplyr::lead(AugDetOngoing) == 0, 1, 0),
                 AugDetInTestID = cumsum(AugDetStart),
-                AugDetGapInTestID = cumsum(AugDetStop))%>%
+                AugDetGapInTestID = cumsum(AugDetStop)) %>%
   dplyr::group_by(testID,AugDetInTestID) %>%
   dplyr::mutate(TimeSinceAugDetStart = cumsum(TimeSincePrevRow),
-                TimeSinceAugDetStart = ifelse(AugDetInTestID==0, NA, TimeSinceAugDetStart))%>%
+                TimeSinceAugDetStart = ifelse(AugDetInTestID==0, NA, TimeSinceAugDetStart)) %>%
   dplyr::group_by(testID,AugDetGapInTestID) %>%
   dplyr::mutate(TimeSinceAugDetStop = cumsum(TimeSincePrevRow),
-                TimeSinceAugDetStop = ifelse(AugDetGapInTestID == 0, NA, TimeSinceAugDetStop))%>%
+                TimeSinceAugDetStop = ifelse(AugDetGapInTestID == 0, NA, TimeSinceAugDetStop)) %>%
   ungroup()
+
+#Track the last detected obstacle
+LastObstacleAugDetected <- dfp %>% 
+  dplyr::group_by(testID, AugDetInTestID) %>% 
+  dplyr::filter(ObjectDetected != "") %>%
+  dplyr::summarise(LastObjAugDet = ObjectDetected)  %>% 
+  filter(!(AugDetInTestID == lead(AugDetInTestID) & testID == lead(testID)) | is.na(lead(AugDetInTestID)))
+
+dfp <- merge(dfp, LastObstacleAugDetected, by=c("testID","AugDetInTestID"), all=T) %>%
+  arrange(rowNum)
+
+remove(LastObstacleAugDetected)
 
 # create speed changes from augDetstart
 dfp %<>% 
@@ -362,11 +386,11 @@ col_order <- c("rowNum", "day", "ParticipantID", "testID", "newTestStarts", "Run
                "objDetGapInTestID", "DetGapDuration",
                # Physical Detection
                "PhysDetInTestID", "PhysDetOngoing", "PhysDetStart", "TimeSincePhysDetStart", "SpeedAtPhysDetStart", 
-               "SpeedChangeFromPhysDetStart", "PhysDetStop", "TimeSincePhysDetStop",  
+               "SpeedChangeFromPhysDetStart", "PhysDetStop", "TimeSincePhysDetStop", "LastObjPhysDet", 
                "PhysDetGapInTestID",
                # Augmented Detection
                "AugDetInTestID", "AugDetOngoing", "AugDetStart", "TimeSinceAugDetStart", "SpeedAtAugDetStart", 
-               "SpeedChangeFromAugDetStart", "AugDetStop", "TimeSinceAugDetStop",  
+               "SpeedChangeFromAugDetStart", "AugDetStop", "TimeSinceAugDetStop", "LastObjAugDet",  
                "AugDetGapInTestID",
                # Collision
                "ObjectCollision", "objCollInTestID", "objCollStart", "CollStartTime", "TimeSinceObjCollStart", "SpeedAtCollStart", "SpeedChangeFromCollStart", 
