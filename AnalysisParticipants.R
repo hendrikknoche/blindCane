@@ -271,24 +271,31 @@ ggplot(dfpSumTestID, aes(x=RunNumber, y=avgSpeed)) +
 # Calculate the mean of the total number of Detections per run
 mean(dfpSumTestID$objectDetected)
 sd(dfpSumTestID$objectDetected)
+qqmath(log(dfpSumTestID$objectDetected), id = 0.05)
 
-summary(lm(objectDetected ~ FOD, data = dfpSumTestID)) 
+summary(glm(objectDetected ~ FOD, data = dfpSumTestID)) 
 
 # Calculate the mean of number of physical Detections per run
 mean(dfpSumTestID$physObjectDetected)
 sd(dfpSumTestID$physObjectDetected)
+qqmath(log(dfpSumTestID$physObjectDetected), id = 0.05)
 
-summary(lm(physObjectDetected ~ FOD, data = dfpSumTestID)) 
+summary(glm(physObjectDetected ~ augObjectDetected, data = dfpSumTestID))
+
+library(ggpubr)
+
+cor(dfpSumTestID$augObjectDetected,dfpSumTestID$physObjectDetected, method="pearson")
 
 # Calculate the mean of number of augmented Detections per run
 mean(dfpSumTestID$augObjectDetected)
 sd(dfpSumTestID$augObjectDetected)
+qqmath(log(dfpSumTestID$augObjectDetected), id = 0.05)
 
 meanAlerts <- dfpSumTestID %>%
-  dplyr::group_by(FOD, Range) %>%
+  dplyr::group_by(FOD) %>%
   dplyr::summarise(mean(avgSpeed),
                    mean(objectDetected),
-                   #sd(objectDetected),
+                   sd(objectDetected),
                    mean(physObjectDetected),
                    #sd(physObjectDetected),
                    mean(augObjectDetected),
@@ -358,18 +365,179 @@ ggplot(data = dfpdaggAlert, aes(x = Range,
   scale_color_discrete("") +
   scale_shape_discrete("") 
 
+
+#Plot alerts vs fod
+dfpdaggAlertFOD <- dfpSumTestID %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::summarise(totalObjectDetected = mean(objectDetected),
+                   physicalObjectDetected = mean(physObjectDetected),
+                   augmentedObjectDetected = mean(augObjectDetected),
+                   smean = mean(objectDetected, na.rm = TRUE),
+                   ssd = sd(objectDetected, na.rm = TRUE),
+                   physsmean = mean(physObjectDetected, na.rm = TRUE),
+                   physssd = sd(physObjectDetected, na.rm = TRUE),
+                   augsmean = mean(augObjectDetected, na.rm = TRUE),
+                   augssd = sd(augObjectDetected, na.rm = TRUE),
+                   count = n()) %>%
+  dplyr::mutate(
+    totalse = ssd / sqrt(count),
+    totallowerci = lower_ci(smean, totalse, count),
+    totalupperci = upper_ci(smean, totalse, count),
+    physse = physssd / sqrt(count),
+    physlowerci = lower_ci(physsmean, physse, count),
+    physupperci = upper_ci(physsmean, physse, count),
+    augse = physssd / sqrt(count),
+    auglowerci = lower_ci(augsmean, augse, count),
+    augupperci = upper_ci(augsmean, augse, count))
+
+dfpdaggAlertFOD$FOD <- factor(dfpdaggAlertFOD$FOD, 
+                  levels=c("White Cane", 
+                           "Tunnel View AWC", 
+                           "Conical View AWC"))
+
+
+dfpdaggAlertFOD$augmentedObjectDetected[dfpdaggAlertFOD$augmentedObjectDetected == 0] <- NA
+
+dfpdaggAlertFOD$augsmean[dfpdaggAlertFOD$augsmean == 0] <- NA
+
+dfpdaggAlertFOD$augssd[dfpdaggAlertFOD$augssd == 0] <- NA
+
+dfpdaggAlertFOD[1, "auglowerci"] <- NA
+
+dfpdaggAlertFOD[1, "augupperci"] <- NA
+
+ggplot(data = dfpdaggAlertFOD, aes(x = FOD, 
+                                group = FOD)) +
+  geom_point(aes(y = totalObjectDetected), color="purple", position = position_dodge(0), alpha=1, size = 5) +
+  geom_line(aes(y = totalObjectDetected), position = position_dodge(0), 
+            alpha = 1, 
+            size = 1) +
+  geom_errorbar(aes(ymin = totallowerci, 
+                    ymax = totalupperci), 
+                width = 0.2, 
+                color = "Black", 
+                position = position_dodge(0)) +
+  geom_point(aes(y = physicalObjectDetected), color="red2", position = position_dodge(0.2), alpha=1, size = 5) +
+  geom_line(aes(y = physicalObjectDetected), position = position_dodge(0.2), 
+            alpha = 1, 
+            size = 1) +
+    geom_errorbar(aes(ymin = physlowerci, 
+                                         ymax = physupperci), 
+                                     width = 0.2, 
+                                     color = "Black", 
+                                     position = position_dodge(0.2)) +
+  geom_point(aes(y = augmentedObjectDetected), color="skyblue",  position = position_dodge(-0.2), alpha=1, size = 5) +
+  geom_line(aes(y = augmentedObjectDetected), position = position_dodge(-0.2), 
+            alpha = 1, 
+            size = 1) +
+    geom_errorbar(aes(ymin = auglowerci, 
+                      ymax = augupperci), 
+                  width = 0.2, 
+                  color = "Black", 
+                  position = position_dodge(-0.2)) +
+  ylab("Average Number of Alerts") +
+  xlab("") +
+  scale_y_continuous()+
+  theme_bw() +
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 14),
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 14),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black")
+  ) +
+  scale_color_discrete("") +
+  scale_shape_discrete("") 
+
+
+#----- Mean: Range LMM -----
+
+# Making the NULL model, only including participants
+WS.1.Pid <- lmer(avgSpeed ~ 1 +
+                   #(1 | Scenario),
+                   (1 | ParticipantID),
+                 data = dfpSumTestID, 
+                 REML = FALSE)
+
+r.squaredGLMM(WS.1.Pid) 
+summary(WS.1.Pid)
+
+# adding scenario
+WS.FOD.Pid <- lmer(avgSpeed ~ FOD +
+                     #(1 | Scenario) +
+                     (1 | ParticipantID),
+                   data = dfpSumTestID, 
+                   REML = FALSE
+)
+
+r.squaredGLMM(WS.FOD.Pid) 
+summary(WS.FOD.Pid)
+anova(WS.1.Pid, WS.FOD.Pid)
+
+dfpSumTestID$Range <- as.factor(dfpSumTestID$Range)
+
+# adding scenario
+WS.FOD.Range.Pid <- lmer(avgSpeed ~ FOD + Range +
+                     #(1 | Scenario) +
+                     (1 | ParticipantID),
+                   data = dfpSumTestID, 
+                   REML = FALSE
+)
+
+r.squaredGLMM(WS.FOD.Range.Pid) 
+summary(WS.FOD.Range.Pid)
+anova(WS.FOD.Pid, WS.FOD.Range.Pid)
+
+#----- Mean: Alerts LMM -----
+
+# Making the NULL model, only including participants
+WS.1.Pid <- lmer(avgSpeed ~ 1 +
+                   #(1 | Scenario),
+                   (1 | ParticipantID),
+                 data = dfpSumTestID, 
+                 REML = FALSE)
+
+r.squaredGLMM(WS.1.Pid) 
+summary(WS.1.Pid)
+confint(WS.1.Pid)
+
+# adding scenario
+WS.FOD.Pid <- lmer(avgSpeed ~ FOD + objectDetected +
+                     #(1 | Scenario) +
+                     (1 | ParticipantID),
+                   data = dfpSumTestID, 
+                   REML = FALSE
+)
+
+r.squaredGLMM(WS.FOD.Pid) 
+summary(WS.FOD.Pid)
+confint(WS.FOD.Pid)
+
+# significant - yes
+anova(WS.1.Pid, WS.FOD.Pid)
+
+WS.Alert.Pid <- lmer(avgSpeed ~ objectDetected +
+                         #(1 | Scenario) +
+                         (1 | ParticipantID),
+                       data = dfpSumTestID, 
+                       REML = FALSE
+)
+
+r.squaredGLMM(WS.Alert.Pid) 
+summary(WS.Alert.Pid)
+confint(WS.Alert.Pid)
+anova(WS.1.Pid, WS.Alert.Pid)
+
 #----- Mean: Alerts per obstacle -----
-
-test2 <- dfp %>%
-  dplyr::filter(newTestStarts == 1) %>%
-  #dplyr::group_by(testID, FOD, Range, Scenario) %>%
-  dplyr::count(Scenario)
-
-test2 #Fuck... someone fucked up during the test
 
 test <- dfp %>%
   dplyr::filter(objDetStart == 1) %>%
-  dplyr::group_by(testID, FOD) %>%
+  dplyr::group_by(testID, ParticipantID, Scenario, FOD) %>%
   dplyr::select(ObjectDetected, rollingSpeedMedian) %>%
   dplyr::count(ObjectDetected) %>%
   dplyr::rename(NumberOfAlerts = n)
@@ -377,31 +545,19 @@ test <- dfp %>%
 test
 
 moreTest <- test %>%
-  dplyr::group_by(testID, FOD) %>%
+  dplyr::group_by(testID, ParticipantID, Scenario, FOD) %>%
   dplyr::summarise(NumberOfObjDet = n(),
                    avgNumberOfAlerts = mean(NumberOfAlerts))
 
 moreTest
 
-summary(lm(NumberOfObjDet ~ FOD, data = moreTest)) 
+dfpSumTestID <- merge(x = dfpSumTestID, y = moreTest, by = c("testID", "ParticipantID", "Scenario", "FOD"), all.x = TRUE)
 
-testSpeed <- dfp %>%
-  dplyr::group_by(testID, FOD) %>%
-  dplyr::summarise(avgSpeed = mean(rollingSpeedMedian, na.rm = TRUE))
+dfpSumTestID$NumberOfObjDet[is.na(dfpSumTestID$NumberOfObjDet)] <- 0
 
-testSpeed
+dfpSumTestID$avgNumberOfAlerts[is.na(dfpSumTestID$avgNumberOfAlerts)] <- 0
 
-godWork <- merge(x = moreTest, y = testSpeed, by = c("testID", "FOD"), all.x = TRUE)
-
-godWork
-
-summary(lm(avgSpeed ~ NumberOfObjDet, data = godWork)) 
-
-summary(lm(avgSpeed ~ avgNumberOfAlerts, data = godWork))
-
-summary(lm(avgSpeed ~ NumberOfObjDet + avgNumberOfAlerts, data = godWork))
-
-MeansTest <- moreTest %>%
+MeansTest <- dfpSumTestID %>%
   dplyr::group_by(FOD) %>%
   dplyr::summarise(avgNumberOfObjDet = mean(NumberOfObjDet),
                    sdNumberOfObjDet = sd(NumberOfObjDet),
@@ -410,38 +566,100 @@ MeansTest <- moreTest %>%
 
 MeansTest
 
+summary(glm(NumberOfObjDet ~ FOD, data = dfpSumTestID, family = poisson)) 
+
+summary(glm(avgNumberOfAlerts ~ FOD, data = dfpSumTestID, family = poisson))
+
+
+# Making the NULL model, only including participants
+WS.1.Pid <- lmer(avgSpeed ~ 1 +
+                   #(1 | Scenario),
+                   (1 | ParticipantID),
+                 data = dfpSumTestID, 
+                 REML = FALSE)
+
+r.squaredGLMM(WS.1.Pid) 
+summary(WS.1.Pid)
+confint(WS.1.Pid)
+
+# adding scenario
+WS.FOD.Pid <- lmer(avgSpeed ~ FOD +
+                     #(1 | Scenario) +
+                     (1 | ParticipantID),
+                   data = dfpSumTestID, 
+                   REML = FALSE
+)
+
+r.squaredGLMM(WS.FOD.Pid) 
+summary(WS.FOD.Pid)
+confint(WS.FOD.Pid)
+
+# significant - yes
+anova(WS.1.Pid, WS.FOD.Pid)
+
+WS.FOD.NoO.Pid <- lmer(avgSpeed ~ FOD + NumberOfObjDet +
+                          #(1 | Scenario) +
+                          (1 | ParticipantID),
+                        data = dfpSumTestID, 
+                        REML = FALSE
+)
+
+
+r.squaredGLMM(WS.FOD.NoO.Pid) 
+summary(WS.FOD.NoO.Pid)
+# significant - yes
+anova(WS.FOD.Pid, WS.FOD.NoO.Pid)
+
+
+# Add number of alerts 
+WS.FOD.NoO.NpA.Pid <- lmer(avgSpeed ~  FOD + NumberOfObjDet + avgNumberOfAlerts +
+                                 #(1 | Scenario) +
+                                 (1 | ParticipantID),
+                               data = dfpSumTestID, REML = FALSE
+)
+
+r.squaredGLMM(WS.FOD.NoO.NpA.Pid) 
+summary(WS.FOD.NoO.NpA.Pid)
+anova(WS.FOD.NoO.Pid, WS.FOD.NoO.NpA.Pid)
+
 #----- Mean: Physical Alerts per obstacle -----
 
 PhysAlertNumObj <- dfp %>%
   dplyr::filter(PhysDetStart == 1) %>%
-  dplyr::group_by(testID, FOD, TimeSeconds) %>%
+  dplyr::group_by(testID, FOD) %>%
   dplyr::count(ObjectDetected) %>%
-  dplyr::rename(NumberOfAlerts = n)
+  dplyr::rename(NumberOfPhysAlerts = n)
 
 PhysAlertNumObj
 
 PhysAlertPerObj <- PhysAlertNumObj %>%
-  dplyr::group_by(testID, FOD, Range) %>%
-  dplyr::summarise(NumberOfObjDet = n(),
-                   avgNumberOfAlerts = mean(NumberOfAlerts))
+  dplyr::group_by(testID, FOD) %>%
+  dplyr::summarise(NumberOfObjPhysDet = n(),
+                   avgNumberOfPhysAlerts = mean(NumberOfPhysAlerts))
 
 PhysAlertPerObj
+ 
 
-summary(lm(NumberOfObjDet ~ FOD, data = PhysAlertPerObj)) 
+dfpSumTestID <- merge(x = dfpSumTestID, y = PhysAlertPerObj, by = c("testID", "FOD"), all.x = TRUE)
 
-PhysAlertPerObjWithSpeed <- merge(x = PhysAlertPerObj, y = testSpeed, by = c("testID", "FOD"), all.x = TRUE)
+dfpSumTestID$NumberOfObjPhysDet[is.na(dfpSumTestID$NumberOfObjPhysDet)] <- 0
 
-PhysAlertPerObjWithSpeed
+dfpSumTestID$avgNumberOfPhysAlerts[is.na(dfpSumTestID$avgNumberOfPhysAlerts)] <- 0
+
+
+summary(glm(NumberOfObjPhysDet ~ FOD, data = dfpSumTestID))
+
+summary(glm(avgNumberOfPhysAlerts ~ FOD, data = dfpSumTestID))
 
 
 summary(lm(avgSpeed ~ NumberOfObjDet + avgNumberOfAlerts, data = PhysAlertPerObjWithSpeed)) 
 
-MeansPhysAlertPerObj <- PhysAlertPerObj %>%
+MeansPhysAlertPerObj <- dfpSumTestID %>%
   dplyr::group_by(FOD) %>%
-  dplyr::summarise(avgNumberOfObjDet = mean(NumberOfObjDet),
-                   sdNumberOfObjDet = sd(NumberOfObjDet),
-                   avgNumberOfAlertsPerObj = mean(avgNumberOfAlerts),
-                   sdNumberOfAlerts = sd(avgNumberOfAlerts))
+  dplyr::summarise(avgNumberOfObjDet = mean(NumberOfObjPhysDet),
+                   sdNumberOfObjDet = sd(NumberOfObjPhysDet),
+                   avgNumberOfAlertsPerObj = mean(avgNumberOfPhysAlerts),
+                   sdNumberOfAlerts = sd(avgNumberOfPhysAlerts))
 
 MeansPhysAlertPerObj
 
@@ -522,82 +740,165 @@ summary(lm(avgSpeed ~ objectCollisions + NumberOfObjPhysDet + avgNumberOfPhysAle
 
 summary(lm(avgSpeed ~ FOD * (NumberOfObjPhysDet + NumberOfObjAugDet), data = AlertsPerObstacle)) 
 
+#----- LMM: Kenetic vs Vibration -----
+
 # Making the NULL model, only including participants
-WS.Power.Part <- lmer(avgSpeed ~ 1 +
+WS.1.Pid <- lmer(avgSpeed ~ 1 +
+                   (1 | ParticipantID),
+                 data = dfpSumTestID, REML = FALSE )
+
+summary(WS.1.Pid)
+r.squaredGLMM(WS.1.Pid) 
+
+# add scenario
+WS.Coll.Pid <- lmer(avgSpeed ~ objectCollisions +
+                     (1 | ParticipantID),
+                   data = dfpSumTestID, REML = FALSE)
+
+summary(WS.Coll.Pid)
+r.squaredGLMM(WS.Coll.Pid) 
+anova(WS.1.Pid, WS.Coll.Pid)
+
+# Add Collisions
+WS.Coll.Phys.Pid <- lmer(avgSpeed ~ objectCollisions + physObjectDetected  + 
+                      (1 | ParticipantID),
+                    data = dfpSumTestID, REML = FALSE)
+
+r.squaredGLMM(WS.Coll.Phys.Pid) 
+summary(WS.Coll.Phys.Pid)
+anova(WS.Coll.Phys.Pid, WS.Coll.Pid)
+
+# Add obstacles kinetic detected 
+WS.Coll.Phys.Aug.Pid <- lmer(avgSpeed ~ objectCollisions + physObjectDetected + augObjectDetected + 
+                              (1 | ParticipantID),
+                            data = dfpSumTestID, REML = FALSE)
+
+r.squaredGLMM(WS.Coll.Phys.Aug.Pid) 
+summary(WS.Coll.Phys.Aug.Pid)
+anova(WS.Coll.Phys.Aug.Pid, WS.Coll.Phys.Pid)
+
+# Add Collisions
+WS.Phys.Pid <- lmer(avgSpeed ~physObjectDetected  + 
+                          (1 | ParticipantID),
+                        data = dfpSumTestID, REML = FALSE)
+
+r.squaredGLMM(WS.Phys.Pid) 
+summary(WS.Phys.Pid)
+anova(WS.Phys.Pid, WS.1.Pid)
+
+# Add Collisions
+WS.FOD.Aug.Pid <- lmer(avgSpeed ~ augObjectDetected  + 
+                          (1 | ParticipantID),
+                        data = dfpSumTestID, REML = FALSE)
+
+r.squaredGLMM(WS.FOD.Aug.Pid) 
+summary(WS.FOD.Aug.Pid)
+anova(WS.FOD.Aug.Pid, WS.1.Pid)
+
+# Add obstacles kinetic detected 
+WS.FOD.Phys.Aug.Pid <- lmer(avgSpeed ~ physObjectDetected + augObjectDetected + 
+                               (1 | ParticipantID),
+                             data = dfpSumTestID, REML = FALSE)
+
+r.squaredGLMM(WS.FOD.Phys.Aug.Pid) 
+summary(WS.FOD.Phys.Aug.Pid)
+anova(WS.FOD.Phys.Aug.Pid, WS.Phys.Pid)
+
+#----- LMM: kinetic unique detections and alerts per obstecal -----
+
+# Making the NULL model, only including participants
+WS.1.Pid <- lmer(avgSpeed ~ 1 +
+                   (1 | ParticipantID),
+                 data = AlertsPerObstacle, REML = FALSE )
+
+summary(WS.1.Pid)
+r.squaredGLMM(WS.1.Pid) 
+
+# Add obstacles kinetic detected 
+WS.Phys.Pid <- lmer(avgSpeed ~ NumberOfObjPhysDet + 
+                               (1 | ParticipantID),
+                             data = AlertsPerObstacle, REML = FALSE)
+
+r.squaredGLMM(WS.Phys.Pid) 
+summary(WS.Phys.Pid)
+anova(WS.Phys.Pid, WS.1.Pid)
+
+# Add kinetic alerts per obstacle 
+WS.Phys.Per.Pid <- lmer(avgSpeed ~ NumberOfObjPhysDet + avgNumberOfPhysAlertsPerObj +
+                                   (1 | ParticipantID),
+                                 data = AlertsPerObstacle, REML = FALSE)
+
+r.squaredGLMM(WS.Phys.Per.Pid) 
+summary(WS.Phys.Per.Pid)
+anova(WS.Phys.Per.Pid, WS.Phys.Pid)
+
+#----- LMM: With everything -----
+
+# Making the NULL model, only including participants
+WS.1.Pid <- lmer(avgSpeed ~ 1 +
                         (1 | ParticipantID),
                       data = AlertsPerObstacle, REML = FALSE )
 
-confint(WS.Power.Part)
-r.squaredGLMM(WS.Power.Part) 
+summary(WS.1.Pid)
+r.squaredGLMM(WS.1.Pid) 
 
 # add scenario
-WS.Power.Phys.Part <- lmer(log(avgSpeed) ~ NumberOfObjPhysDet +
+WS.FOD.Pid <- lmer(avgSpeed ~ FOD +
                              (1 | ParticipantID),
                            data = AlertsPerObstacle, REML = FALSE)
 
+summary(WS.1.Pid)
 r.squaredGLMM(WS.Power.Phys.Part) 
+anova(WS.1.Pid, WS.FOD.Pid)
 
-# significant - yes
-anova(WS.Power.Part, WS.Power.Phys.Part)
-
-# Add number of alerts 
-WS.Power.Phys.Aug.Part <- lmer(log(avgSpeed) ~ NumberOfObjPhysDet + NumberOfObjAugDet +
+# Add Collisions
+WS.FOD.Coll.Pid <- lmer(avgSpeed ~ FOD + objectCollisions + 
                              (1 | ParticipantID),
                            data = AlertsPerObstacle, REML = FALSE)
 
-r.squaredGLMM(WS.Power.Phys.Aug.Part) 
-summary(WS.Power.Phys.Aug.Part)
+r.squaredGLMM(WS.FOD.Coll.Pid) 
+summary(WS.FOD.Coll.Pid)
+anova(WS.FOD.Coll.Pid, WS.FOD.Pid)
 
-# significant - yes
-anova(WS.Power.Phys.Aug.Part, WS.Power.Phys.Part)
-
-# Add number of alerts 
-WS.Power.Phys.Per.Aug.Part <- lmer(log(avgSpeed) ~ NumberOfObjPhysDet + avgNumberOfPhysAlertsPerObj + NumberOfObjAugDet + 
+# Add obstacles kinetic detected 
+WS.FOD.Coll.Phys.Pid <- lmer(avgSpeed ~ FOD + objectCollisions + NumberOfObjPhysDet + 
                                  (1 | ParticipantID),
                                data = AlertsPerObstacle, REML = FALSE)
 
-r.squaredGLMM(WS.Power.Phys.Per.Aug.Part) 
-summary(WS.Power.Phys.Per.Aug.Part)
+r.squaredGLMM(WS.FOD.Coll.Phys.Pid) 
+summary(WS.FOD.Coll.Phys.Pid)
+anova(WS.FOD.Coll.Phys.Pid, WS.FOD.Coll.Pid)
 
-# significant - yes
-anova(WS.Power.Phys.Per.Aug.Part, WS.Power.Phys.Aug.Part)
-
-# Add number of alerts 
-WS.Power.Phys.Per.Aug.Per.Part <- lmer(log(avgSpeed) ~ NumberOfObjPhysDet + avgNumberOfPhysAlertsPerObj + NumberOfObjAugDet + avgNumberOfAugAlertsPerObj +
+# Add kinetic alerts per obstacle 
+WS.FOD.Coll.Phys.Per.Pid <- lmer(avgSpeed ~ FOD + objectCollisions + NumberOfObjPhysDet + avgNumberOfPhysAlertsPerObj +
                                      (1 | ParticipantID),
                                    data = AlertsPerObstacle, REML = FALSE)
 
-r.squaredGLMM(WS.Power.Phys.Per.Aug.Per.Part) 
-summary(WS.Power.Phys.Per.Aug.Per.Part)
+r.squaredGLMM(WS.FOD.Coll.Phys.Per.Pid) 
+summary(WS.FOD.Coll.Phys.Per.Pid)
+anova(WS.FOD.Coll.Phys.Per.Pid, WS.FOD.Coll.Phys.Pid)
 
-# significant - yes
-anova(WS.Power.Phys.Per.Aug.Per.Part, WS.Power.Phys.Per.Aug.Part)
-
-# Add number of alerts 
-WS.Power.Coll.Phys.Per.Aug.Per.Part <- lmer(avgSpeed ~ objectCollisions + NumberOfObjPhysDet + avgNumberOfPhysAlertsPerObj + NumberOfObjAugDet + avgNumberOfAugAlertsPerObj +
+# Add obstacles vibration detected 
+WS.FOD.Coll.Phys.Per.Aug.Pid <- lmer(avgSpeed ~ FOD + objectCollisions + NumberOfObjPhysDet + avgNumberOfPhysAlertsPerObj + NumberOfObjAugDet +
                                          (1 | ParticipantID),
                                        data = AlertsPerObstacle, REML = FALSE)
 
+r.squaredGLMM(WS.FOD.Coll.Phys.Per.Aug.Pid) 
+summary(WS.FOD.Coll.Phys.Per.Aug.Pid)
+anova(WS.FOD.Coll.Phys.Per.Aug.Pid, WS.FOD.Coll.Phys.Per.Pid)
 
-exp(coef(WS.Power.Coll.Phys.Per.Aug.Per.Part)["NumberOfObjPhysDet"] - 1) * 100
+# Add vibrations alerts per obstacle physObjectDetected + augObjectDetected +
+WS.FOD.Coll.Phys.Per.Aug.Per.Pid <- lmer(avgSpeed ~  objectCollisions + NumberOfObjPhysDet * avgNumberOfPhysAlertsPerObj + NumberOfObjAugDet * avgNumberOfAugAlertsPerObj +
+                                         (1 | ParticipantID),
+                                       data = AlertsPerObstacle, REML = FALSE)
 
+WS.FOD.Coll.Phys.Per.Aug.Per.Pid <- lmer(avgSpeed ~  objectCollisions + NumberOfObjPhysDet + NumberOfObjAugDet + 
+                                           (1 | ParticipantID),
+                                         data = AlertsPerObstacle, REML = FALSE)
 
-testlmResiduals <- resid(lm(avgSpeed ~ objectCollisions, data = AlertsPerObstacle))
-
-# Plot the residuals - should (ish) have the same amount above and below the line without any clear pattern
-plot(AlertsPerObstacle$avgSpeed, testlmResiduals) + abline(0,0) # Could be a lot better the bottom of the line is ot heavy
-
-lmmResiduals <- resid(WS.Power.Coll.Phys.Per.Aug.Per.Part)
-
-# Plot the residuals - should (ish) have the same amount above and below the line without any clear pattern
-plot(AlertsPerObstacle$avgSpeed, lmmResiduals) + abline(0,0) # Could be a lot better the bottom of the line is ot heavy
-
-r.squaredGLMM(WS.Power.Coll.Phys.Per.Aug.Per.Part) 
-summary(WS.Power.Coll.Phys.Per.Aug.Per.Part)
-VarCorr(WS.Power.Coll.Phys.Per.Aug.Per.Part)
-
-# significant - yes
-anova(WS.Power.Coll.Phys.Per.Aug.Per.Part, WS.Power.Phys.Per.Aug.Per.Part)
+r.squaredGLMM(WS.FOD.Coll.Phys.Per.Aug.Per.Pid) 
+summary(WS.FOD.Coll.Phys.Per.Aug.Per.Pid)
+anova(WS.FOD.Coll.Phys.Per.Aug.Per.Pid, WS.FOD.Coll.Phys.Per.Aug.Pid)
 
 #----- Mean: Walking speed -----
 
@@ -724,10 +1025,64 @@ meanCollisions <- dfpSumTestID %>%
 
 meanCollisions
 
-summary(lm(objectCollisions ~ FOD, data = dfpSumTestID)) 
+summary(glm(objectCollisions ~ FOD, data = dfpSumTestID)) 
 
 
-summary(lm(objectCollisions ~ physObjectDetected + augObjectDetected, data = dfpSumTestID)) 
+summary(glm(objectCollisions ~ physObjectDetected + augObjectDetected, data = dfpSumTestID)) 
+
+# Making the NULL model, only including participants
+WS.1.Pid <- lmer(avgSpeed ~ 1 +
+                    #(1 | Scenario),
+                    (1 | ParticipantID),
+                  data = dfpSumTestID, 
+                  REML = FALSE)
+
+r.squaredGLMM(WS.1.Pid) 
+summary(WS.1.Pid)
+confint(WS.1.Pid)
+
+# adding scenario
+WS.FOD.Pid <- lmer(avgSpeed ~ FOD +
+                          #(1 | Scenario) +
+                          (1 | ParticipantID),
+                        data = dfpSumTestID, 
+                        REML = FALSE
+)
+
+r.squaredGLMM(WS.FOD.Pid) 
+summary(WS.FOD.Pid)
+confint(WS.FOD.Pid)
+
+# significant - yes
+anova(WS.1.Pid, WS.FOD.Pid)
+
+# adding scenario
+WS.FOD.Range.Pid <- lmer(avgSpeed ~ FOD + Range +
+                     #(1 | Scenario) +
+                     (1 | ParticipantID),
+                   data = dfpSumTestID, 
+                   REML = FALSE
+)
+
+r.squaredGLMM(WS.FOD.Range.Pid) 
+summary(WS.FOD.Range.Pid)
+confint(WS.FOD.Range.Pid)
+
+# significant - yes
+anova(WS.FOD.Pid, WS.FOD.Range.Pid)
+
+WS.FOD.Coll.Pid <- lmer(avgSpeed ~ objectCollisions +
+                              #(1 | Scenario) +
+                              (1 | ParticipantID),
+                            data = dfpSumTestID, 
+                            REML = FALSE
+)
+
+
+r.squaredGLMM(WS.FOD.Coll.Pid) 
+summary(WS.FOD.Coll.Pid)
+# significant - yes
+anova(WS.1.Pid, WS.FOD.Coll.Pid)
 
 #----- Mean: Collisions per Obstacle -----
 
@@ -1086,233 +1441,72 @@ shapiro.test(WalkingSpeed.Power.Residuals) # Very good - data should be normal d
 #----- LMEM: Walking Speed vs alerts -----
 
 # Making the NULL model, only including participants
-Log.WS.1.PCPs <- lmer(log(avgSpeed) ~ 1 +
+WS.1.Pid <- lmer(avgSpeed ~ 1 +
+                        #(1 | Scenario),
                         (1 | ParticipantID),
                       data = dfpSumTestID, REML = FALSE)
 
-r.squaredGLMM(Log.WS.1.PCPs) 
-summary(Log.WS.1.PCPs)
-confint(Log.WS.1.PCPs)
-plot(Log.WS.1.PCPs, type = c("p", "smooth"))
-qqmath(Log.WS.1.PCPs, id = 0.05)
+r.squaredGLMM(WS.1.Pid) 
+summary(WS.1.Pid)
+confint(WS.1.Pid)
+plot(WS.1.Pid, type = c("p", "smooth"))
+qqmath(WS.1.Pid, id = 0.05)
 
-# adding scenario
-Log.WS.Alerts.PCPs <- lmer(log(avgSpeed) ~ objectDetected +
+#Add FOD
+WS.FOD.Pid <- lmer(avgSpeed ~ FOD +
                              (1 | ParticipantID),
-                           data = dfpSumTestID, REML = FALSE
+                           data = dfpSumTestID, 
+                           REML = FALSE
 )
 
-r.squaredGLMM(Log.WS.Alerts.PCPs) 
-summary(Log.WS.Alerts.PCPs)
-confint(Log.WS.Alerts.PCPs)
-plot(Log.WS.Alerts.PCPs, type = c("p", "smooth"))
 
-
+r.squaredGLMM(WS.FOD.Pid) 
+summary(WS.FOD.Pid)
 # significant - yes
-anova(Log.WS.1.PCPs, Log.WS.Alerts.PCPs)
+anova(WS.1.Pid, WS.FOD.Pid)
 
 # Add number of alerts 
-Log.WS.Alerts.PCPs.Run <- lmer(log(avgSpeed) ~ objectDetected + 
-                                    (1 | ParticipantID) +
-                                    (1 | RunNumber),
+WS.FOD.Alerts.Pid <- lmer(avgSpeed ~ FOD + objectDetected + 
+                                    (1 | ParticipantID),
                                   data = dfpSumTestID, REML = FALSE
 )
 
-r.squaredGLMM(Log.WS.Alerts.PCPs.Run) 
-summary(Log.WS.Alerts.PCPs.Run)
+r.squaredGLMM(WS.FOD.Alerts.Pid) 
+summary(WS.FOD.Alerts.Pid)
 
 # significant - yes
-anova(Log.WS.Alerts.PCPs, Log.WS.Alerts.PCPs.Run)
-
-# add slope to participants
-Log.WS.Alerts.PCPs.Run.Scen <- lmer(log(avgSpeed) ~ objectDetected + 
-                                    (1 | ParticipantID) +
-                                    (1 | RunNumber) +
-                                    (1 | Scenario),
-                                  data = dfpSumTestID, REML = FALSE
-)
-
-r.squaredGLMM(Log.WS.Alerts.PCPs.Run.Scen) 
-summary(Log.WS.Alerts.PCPs.Run.Scen)
-
-# significant - yes
-anova(Log.WS.Alerts.PCPs.Run, Log.WS.Alerts.PCPs.Run.Scen)
-
-# add slope to scenario
-Log.WS.Alerts.PCPs.Slope.Scen.Run <- lmer(log(avgSpeed) ~ objectDetected + 
-                                          (1 + objectDetected | ParticipantID) +
-                                          (1 | Scenario) +
-                                          (1 | RunNumber),
-                                        data = dfpSumTestID, REML = FALSE
-)
-
-r.squaredGLMM(Log.WS.Alerts.PCPs.Slope.Scen.Run) 
-summary(Log.WS.Alerts.PCPs.Slope.Scen.Run)
-
-# significant - Yes
-anova(Log.WS.Alerts.PCPs.Run.Scen, Log.WS.Alerts.PCPs.Slope.Scen.Run)
-
-# add run number
-Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope <- lmer(log(avgSpeed) ~ objectDetected + 
-                                               (1 + objectDetected | ParticipantID) +
-                                               (1 | Scenario) +
-                                               (1 + objectDetected | RunNumber),
-                                             data = dfpSumTestID, REML = FALSE
-)
-
-r.squaredGLMM(Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope)
-summary(Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope)
-
-# significant - Yes 
-anova(Log.WS.Alerts.PCPs.Slope.Scen.Run, Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope)
-
-# add run number
-Log.WS.Alerts.PCPs.Slope.Scen.Slope.Run.Slope <- lmer(log(avgSpeed) ~ objectDetected + 
-                                                   (1 + objectDetected | ParticipantID) +
-                                                   (1 + objectDetected | Scenario) +
-                                                   (1 + objectDetected | RunNumber),
-                                                 data = dfpSumTestID, REML = FALSE
-)
-
-r.squaredGLMM(Log.WS.Alerts.PCPs.Slope.Scen.Slope.Run.Slope)
-summary(Log.WS.Alerts.PCPs.Slope.Scen.Slope.Run.Slope)
-
-# significant - No 
-anova(Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope, Log.WS.Alerts.PCPs.Slope.Scen.Slope.Run.Slope)
-
-
-
-#
-# Making the NULL model, only including participants
-Log.WS.1.PCPs <- lmer(log(avgSpeed) ~ 1 +
-                        (1 | ParticipantID),
-                      data = dfpSumTestID, REML = FALSE )
-
-r.squaredGLMM(Log.WS.1.PCPs) 
-summary(Log.WS.1.PCPs)
-confint(Log.WS.1.PCPs)
-plot(Log.WS.1.PCPs, type = c("p", "smooth"))
-qqmath(Log.WS.1.PCPs, id = 0.05)
-
-# adding scenario
-Log.WS.Alerts.PCPs <- lmer(log(avgSpeed) ~ objectDetected +
-                             (1 | ParticipantID),
-                           data = dfpSumTestID, REML = FALSE
-)
-
-r.squaredGLMM(Log.WS.Alerts.PCPs) 
-summary(Log.WS.Alerts.PCPs)
-confint(Log.WS.Alerts.PCPs)
-plot(Log.WS.Alerts.PCPs, type = c("p", "smooth"))
-
-
-# significant - yes
-anova(Log.WS.1.PCPs, Log.WS.Alerts.PCPs)
-
-# Add number of alerts 
-Log.WS.Alerts.PCPs.Run <- lmer(log(avgSpeed) ~ objectDetected + 
-                                 (1 + objectDetected | ParticipantID),
-                               data = dfpSumTestID, REML = FALSE
-)
-
-r.squaredGLMM(Log.WS.Alerts.PCPs.Run) 
-summary(Log.WS.Alerts.PCPs.Run)
-
-dfpSumTestID <- dfpSumTestID %>%
-  mutate(ParticipantID = as.factor(ParticipantID))
-
-# significant - yes
-anova(Log.WS.Alerts.PCPs, Log.WS.Alerts.PCPs.Run)
-
-# add slope to participants
-Log.WS.Alerts.PCPs.Run.Scen <- lmer(log(avgSpeed) ~ objectDetected + 
-                                      (1 + objectDetected | ParticipantID) +
-                                      (1 | RunNumber),
-                                    data = dfpSumTestID, REML = FALSE
-)
-
-r.squaredGLMM(Log.WS.Alerts.PCPs.Run.Scen) 
-summary(Log.WS.Alerts.PCPs.Run.Scen)
-
-# significant - yes
-anova(Log.WS.Alerts.PCPs.Run, Log.WS.Alerts.PCPs.Run.Scen)
-
-# add slope to scenario
-Log.WS.Alerts.PCPs.Slope.Scen.Run <- lmer(log(avgSpeed) ~ objectDetected + 
-                                            (1 + objectDetected | ParticipantID) +
-                                            (1 + objectDetected  | RunNumber),
-                                          data = dfpSumTestID, REML = FALSE
-)
-
-r.squaredGLMM(Log.WS.Alerts.PCPs.Slope.Scen.Run) 
-summary(Log.WS.Alerts.PCPs.Slope.Scen.Run)
-
-# significant - Yes
-anova(Log.WS.Alerts.PCPs.Run.Scen, Log.WS.Alerts.PCPs.Slope.Scen.Run)
-
-# add run number
-Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope <- lmer(log(avgSpeed) ~ objectDetected + 
-                                                  (1 + objectDetected | ParticipantID) +
-                                                  (1 | Scenario) +
-                                                  (1 + objectDetected | RunNumber),
-                                                data = dfpSumTestID, REML = FALSE
-)
-
-r.squaredGLMM(Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope)
-summary(Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope)
-
-# significant - Yes 
-anova(Log.WS.Alerts.PCPs.Slope.Scen.Run, Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope)
-
-# add run number
-Log.WS.Alerts.PCPs.Slope.Scen.Slope.Run.Slope <- lmer(log(avgSpeed) ~ objectDetected + 
-                                                        (1 + objectDetected | ParticipantID) +
-                                                        (1 + objectDetected | Scenario) +
-                                                        (1 + objectDetected | RunNumber),
-                                                      data = dfpSumTestID, REML = FALSE
-)
-
-r.squaredGLMM(Log.WS.Alerts.PCPs.Slope.Scen.Slope.Run.Slope)
-summary(Log.WS.Alerts.PCPs.Slope.Scen.Slope.Run.Slope)
-
-# significant - No 
-anova(Log.WS.Alerts.PCPs.Slope.Scen.Run.Slope, Log.WS.Alerts.PCPs.Slope.Scen.Slope.Run.Slope)
-
-
+anova(WS.FOD.Pid, WS.FOD.Alerts.Pid)
 
 
 
 #----- LMEM: Walking Speed vs Phy-Alerts -----
 
 # Making the NULL model, only including participants
-WS.Power.Part <- lmer(log(avgSpeed) ~ 1 +
+WS.1.Pid <- lmer(avgSpeed ~ 1 +
                         (1 | ParticipantID),
                       data = dfpSumTestID, REML = FALSE )
 
-# adding scenario
-WS.Power.Part.Scen <- lmer(log(avgSpeed) ~ 1 +
-                             (1 | ParticipantID) +
-                             (1 | Scenario),
-                           data = dfpSumTestID, REML = FALSE
+# Add number of alerts 
+WS.FOD.Pid <- lmer(avgSpeed ~ FOD + 
+                        (1 | ParticipantID),
+                        data = dfpSumTestID, REML = FALSE
 )
 
 # significant - yes
-anova(WS.Power.Part, WS.Power.Part.Scen)
+anova(WS.1.Pid, WS.FOD.Pid)
 
 # Add number of alerts 
-WS.Power.Part.Scen.phyAlert <- lmer(log(avgSpeed) ~ 1 + log(physObjectDetected + 1) + 
-                                   (1 | ParticipantID) +
-                                   (1 | Scenario),
+WS.FOD.PAlert.Pid <- lmer(avgSpeed ~ FOD + physObjectDetected + 
+                                 (1 | ParticipantID),
                                  data = dfpSumTestID, REML = FALSE
 )
 
 # significant - yes
-anova(WS.Power.Part.Scen, WS.Power.Part.Scen.phyAlert)
+anova(WS.FOD.Pid, WS.FOD.PAlert.Pid)
 
 # add slope to participants
-WS.Power.Part.Slope.Scen.phyAlert <- lmer(log(avgSpeed) ~ 1 + log(physObjectDetected + 1) + 
-                                         (1 + log(1 + physObjectDetected) | ParticipantID) +
-                                         (1 | Scenario),
+WS.Power.Part.Slope.Scen.phyAlert <- lmer(log(avgSpeed) ~ FOD + physObjectDetected + augO + 
+                                         (1 | ParticipantID),
                                        data = dfpSumTestID, REML = FALSE
 )
 
