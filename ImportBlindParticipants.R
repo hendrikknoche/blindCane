@@ -61,14 +61,14 @@ dfp$FOD <- factor(dfp$FOD,
 
 # Rename Columns
 dfp%<>% dplyr::rename(Range = Detection_range_in_Meters,
-                         day = Day_nr.,
-                         PersonSpeed = Person_Speed,
-                         TimeSeconds = Time_in_MS,
-                         TimeStamp = Time_stamp,
-                         ObjectDistance = Distance_to_object,
-                         ObjectCollision = Object_collision,
-                         ObjectDetected = Object_detected,
-                         ParticipantID = Participant.ID)
+                      day = Day_nr.,
+                      PersonSpeed = Person_Speed,
+                      TimeSeconds = Time_in_MS,
+                      TimeStamp = Time_stamp,
+                      ObjectDistance = Distance_to_object,
+                      ObjectCollision = Object_collision,
+                      ObjectDetected = Object_detected,
+                      ParticipantID = Participant.ID)
 
 #Re-name the participant ID
 dfp$ParticipantID <-ifelse(dfp$testID > 420 & dfp$testID < 446, 1, dfp$ParticipantID)  
@@ -197,7 +197,7 @@ dfp %<>%
   dplyr::summarise(objCollDuration = sum(TimeSincePrevRow)) %>% 
   right_join(dfp) %>% 
   arrange(rowNum) %>% 
-  relocate(objCollDuration,ObjectCollision)
+  relocate(objCollDuration, ObjectCollision)
 
 # Calculate Gap duration between collisions
 dfp %<>%
@@ -423,7 +423,7 @@ dfpSumTestID <- dfp %>%
             medianSpeed = median(PersonSpeed),
             maxSpeed = max(PersonSpeed),
             minSpeed = min(PersonSpeed),
-            avgVibDuration = mean(ObjDetDuration),
+            avgVibDuration = mean(ObjDetDuration, na.rm = TRUE),
             avgGabDuration = mean(DetGapDuration),
             objectDetected = sum(objDetStart, na.rm = TRUE),
             physObjectDetected = sum(PhysDetStart, na.rm = TRUE),

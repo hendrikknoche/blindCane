@@ -356,9 +356,6 @@ ggplot(data = daggCollTrain, aes(x = Range,
 
 ### Summary -------
 
-
-
-
 # Below, a summary of our data.
 summary(dftSumTestID)
 
@@ -629,9 +626,9 @@ summary(lm(avgSpeed ~ Range + totalTimeTrainingHrs, data=dftSumTestID))
 # Thus, we split the data up looking at the different conditions individual. 
 # What we find is that range is a significant predictor for wholeroom, but not for corridor. 
 
-WCDat <- dftSumTestID[dftSumTestID$FOD=="Baseline",]
-wrDat <- dftSumTestID[dftSumTestID$FOD=="WholeRoom",]
-corrDat <- dftSumTestID[dftSumTestID$FOD=="Corridor",]
+WCDat <- dftSumTestID[dftSumTestID$FOD=="White Cane",]
+wrDat <- dftSumTestID[dftSumTestID$FOD=="Conical View AWC",]
+corrDat <- dftSumTestID[dftSumTestID$FOD=="Tunnel View AWC",]
 
 summary(lm(avgSpeed ~ Range + totalTimeTrainingHrs, data=wrDat))
 
@@ -642,7 +639,245 @@ summary(lm(avgSpeed ~ Range + totalTimeTrainingHrs, data=corrDat))
 #Based on the figure in the previous section it seems that the FOD influences the walking speed of the user. 
 #What we find is that wholeroom does negatively predict walking speed, while corridor only show a positively tendency to effect walking speed. 
 
+tezt <- dftSumTestID %>%
+  dplyr::select(FOD == "White Cane") %>%
+  dplyr::mutate(augObjectDetected = 0)
+
+meanFOD <- dftSumTestID %>%
+  dplyr::group_by(day,FOD) %>%
+  dplyr::summarise(avgSpeed = mean(avgSpeed),
+                   sdSpeed = sd(avgSpeed, na.rm=TRUE),
+                   avgAlert = mean(objectDetected, na.rm=TRUE),
+                   sdAlert = sd(objectDetected),
+                   avgPhysAlert = mean(physObjectDetected, na.rm=TRUE),
+                   sdPhysAlert = sd(physObjectDetected),
+                   avgAugAlert = mean(augObjectDetected, na.rm=TRUE),
+                   sdAugAlert = sd(augObjectDetected))
+
+view(meanFOD)
+
+
+summary(lm(avgSpeed ~ FOD + Range + physObjectDetected + augObjectDetected + day + objectCollisions, data=dftSumTestID))
+
 summary(lm(avgSpeed ~ FOD + totalTimeTrainingHrs, data=dftSumTestID))
+
+
+summary(glm(objectDetected ~ FOD , family = poisson, data=dftSumTestID))
+
+summary(glm(physObjectDetected ~ FOD, family = poisson, data=dftSumTestID))
+
+summary(glm(augObjectDetected ~ FOD + Range, family = poisson, data=dftSumTestID))
+
+
+
+summary(glm(objectCollisions ~ FOD + day, family = poisson, data=dftSumTestID))
+
+#Corridor
+summary(glm(objectDetected ~ Range, family = poisson, data=wrDat))
+
+summary(glm(physObjectDetected ~ Range, family = poisson, data=wrDat))
+
+summary(glm(augObjectDetected ~ Range, family = poisson, data=wrDat))
+
+
+#Corridor
+summary(glm(objectDetected ~ Range, family = poisson, data=corrDat))
+
+summary(glm(physObjectDetected ~ Range, family = poisson, data=corrDat))
+
+summary(glm(augObjectDetected ~ Range, family = poisson, data=corrDat))
+
+#Tunnel
+
+# Make functions
+lower_ci <- function(mean, se, n, conf_level = 0.95){
+  lower_ci <- mean - qt(1 - ((1 - conf_level) / 2), n - 1) * se
+}
+upper_ci <- function(mean, se, n, conf_level = 0.95){
+  upper_ci <- mean + qt(1 - ((1 - conf_level) / 2), n - 1) * se
+}
+
+#### Plot: Alert disturbution --------
+
+#Plot alerts vs fod
+dftdaggAlertFOD <- dftSumTestID %>%
+  dplyr::group_by(day, FOD) %>%
+  dplyr::summarise(totalObjectDetected = mean(objectDetected),
+                   physicalObjectDetected = mean(physObjectDetected),
+                   augmentedObjectDetected = mean(augObjectDetected),
+                   smean = mean(objectDetected, na.rm = TRUE),
+                   ssd = sd(objectDetected, na.rm = TRUE),
+                   physsmean = mean(physObjectDetected, na.rm = TRUE),
+                   physssd = sd(physObjectDetected, na.rm = TRUE),
+                   augsmean = mean(augObjectDetected, na.rm = TRUE),
+                   augssd = sd(augObjectDetected, na.rm = TRUE),
+                   count = n()) %>%
+  dplyr::mutate(
+    totalse = ssd / sqrt(count),
+    totallowerci = lower_ci(smean, totalse, count),
+    totalupperci = upper_ci(smean, totalse, count),
+    physse = physssd / sqrt(count),
+    physlowerci = lower_ci(physsmean, physse, count),
+    physupperci = upper_ci(physsmean, physse, count),
+    augse = physssd / sqrt(count),
+    auglowerci = lower_ci(augsmean, augse, count),
+    augupperci = upper_ci(augsmean, augse, count))
+
+dftdaggAlertFOD$FOD <- factor(dftdaggAlertFOD$FOD, 
+                              levels=c("White Cane", 
+                                       "Tunnel View AWC", 
+                                       "Conical View AWC"))
+
+y <- dftdaggAlertFOD[1, "physicalObjectDetected"] + 0.09
+
+dftdaggAlertFOD[1, "physicalObjectDetected"] <- y
+
+dftdaggAlertFOD[1, "augmentedObjectDetected"] <- NA
+
+dftdaggAlertFOD$augsmean[dftdaggAlertFOD$augsmean == 0] <- NA
+
+
+dftdaggAlertFOD$augssd[dftdaggAlertFOD$augssd == 0] <- NA
+
+dftdaggAlertFOD[1, "auglowerci"] <- NA
+
+dftdaggAlertFOD[1, "augupperci"] <- NA
+
+dftdaggAlertFOD[1, "totallowerci"] <- NA
+
+dftdaggAlertFOD[1, "totalupperci"] <- NA
+
+
+ggplot(data = dftdaggAlertFOD, aes(x = day, y=physicalObjectDetected, colour=FOD, group = 1)) +
+  geom_point(position = position_dodge(0.2), alpha=1, size = 5) +
+  geom_line(alpha = 1, 
+            size = 1) +
+  geom_errorbar(aes(ymin = physlowerci, 
+                    ymax = physupperci), 
+                width = 0.2, 
+                color = "Black", 
+                position = position_dodge(0.2)) +
+  expand_limits(y = 0) +
+  ylab("Average Number of Alerts") +
+  xlab("") +
+  scale_y_continuous()+
+  theme_bw() +
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 14),
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 14),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black")
+  ) +
+  guides(color=guide_legend("")) 
+
+#### Plot: Kinetic fall over the three days --------
+
+#Plot alerts vs fod
+dftdaggAlertFOD <- dftSumTestID %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::summarise(totalObjectDetected = mean(objectDetected),
+                   physicalObjectDetected = mean(physObjectDetected),
+                   augmentedObjectDetected = mean(augObjectDetected),
+                   smean = mean(objectDetected, na.rm = TRUE),
+                   ssd = sd(objectDetected, na.rm = TRUE),
+                   physsmean = mean(physObjectDetected, na.rm = TRUE),
+                   physssd = sd(physObjectDetected, na.rm = TRUE),
+                   augsmean = mean(augObjectDetected, na.rm = TRUE),
+                   augssd = sd(augObjectDetected, na.rm = TRUE),
+                   count = n()) %>%
+  dplyr::mutate(
+    totalse = ssd / sqrt(count),
+    totallowerci = lower_ci(smean, totalse, count),
+    totalupperci = upper_ci(smean, totalse, count),
+    physse = physssd / sqrt(count),
+    physlowerci = lower_ci(physsmean, physse, count),
+    physupperci = upper_ci(physsmean, physse, count),
+    augse = physssd / sqrt(count),
+    auglowerci = lower_ci(augsmean, augse, count),
+    augupperci = upper_ci(augsmean, augse, count))
+
+dftdaggAlertFOD$FOD <- factor(dftdaggAlertFOD$FOD, 
+                              levels=c("White Cane", 
+                                       "Tunnel View AWC", 
+                                       "Conical View AWC"))
+
+y <- dftdaggAlertFOD[1, "physicalObjectDetected"] + 0.09
+
+dftdaggAlertFOD[1, "physicalObjectDetected"] <- y
+
+dftdaggAlertFOD[1, "augmentedObjectDetected"] <- NA
+
+dftdaggAlertFOD$augsmean[dftdaggAlertFOD$augsmean == 0] <- NA
+
+
+dftdaggAlertFOD$augssd[dftdaggAlertFOD$augssd == 0] <- NA
+
+dftdaggAlertFOD[1, "auglowerci"] <- NA
+
+dftdaggAlertFOD[1, "augupperci"] <- NA
+
+dftdaggAlertFOD[1, "totallowerci"] <- NA
+
+dftdaggAlertFOD[1, "totalupperci"] <- NA
+
+
+ggplot(data = dftdaggAlertFOD, aes(x = FOD, group = 1)) +
+  scale_color_manual(labels = c("Total Alerts", "Kinetic Alerts", "Vibration Alerts"), values = c("purple", "red2", "skyblue")) +
+  geom_point(aes(y = totalObjectDetected, color="purple"), position = position_dodge(0), alpha=1, size = 5) +
+  geom_line(aes(y = totalObjectDetected, color="purple"), 
+            alpha = 1, 
+            size = 1) +
+  geom_errorbar(aes(ymin = totallowerci, 
+                    ymax = totalupperci), 
+                width = 0.2, 
+                color = "Black", 
+                position = position_dodge(0)) +
+  geom_point(aes(y = physicalObjectDetected, color="red2"), position = position_dodge(0.2), alpha=1, size = 5) +
+  geom_line(aes(y = physicalObjectDetected, color="red2"), 
+            alpha = 1, 
+            size = 1) +
+  geom_errorbar(aes(ymin = physlowerci, 
+                    ymax = physupperci), 
+                width = 0.2, 
+                color = "Black", 
+                position = position_dodge(0.2)) +
+  geom_point(aes(y = augmentedObjectDetected, color="Vibration Alerts"),  position = position_dodge(-0.2), alpha=1, size = 5) +
+  geom_line(aes(y = augmentedObjectDetected, color="Vibration Alerts"),
+            alpha = 1, 
+            size = 1) +
+  geom_errorbar(aes(ymin = auglowerci, 
+                    ymax = augupperci), 
+                width = 0.2, 
+                color = "Black", 
+                position = position_dodge(-0.2)) + 
+  expand_limits(y = 0) +
+  ylab("Average Number of Alerts") +
+  xlab("") +
+  scale_y_continuous()+
+  theme_bw() +
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 14),
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 14),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black")
+  ) +
+  guides(color=guide_legend("")) 
+
+
+
+
 
 ### Collisions effect on walking speed ############################# 
 
@@ -695,6 +930,8 @@ ggplot(dftSumTestID,aes(y = avgSpeed, x = objectDetected, color = factor(Range))
   theme_bw()+
   facet_grid(cols=vars(FOD))
 
+
+mean(dftSumTestID$objectDetected)
 # To test if this was a significant negative predictor of walking speed of the whole data set we found that it was.
 
 summary(lm(avgSpeed ~ objectDetected + totalTimeTrainingHrs, data = dftSumTestID))

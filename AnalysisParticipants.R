@@ -297,12 +297,13 @@ meanAlerts <- dfpSumTestID %>%
                    mean(objectDetected),
                    sd(objectDetected),
                    mean(physObjectDetected),
-                   #sd(physObjectDetected),
+                   sd(physObjectDetected),
                    mean(augObjectDetected),
-                   #sd(augObjectDetected)
+                   sd(augObjectDetected),
+                   mean(objectCollisions)
                    )
 
-meanAlerts
+view(meanAlerts)
 
 # Linear Regression to check significant 
 summary(lm(objectDetected ~ FOD, data = dfpSumTestID)) 
@@ -390,11 +391,15 @@ dfpdaggAlertFOD <- dfpSumTestID %>%
     auglowerci = lower_ci(augsmean, augse, count),
     augupperci = upper_ci(augsmean, augse, count))
 
-dfpdaggAlertFOD$FOD <- factor(dfpdaggAlertFOD$FOD, 
-                  levels=c("White Cane", 
-                           "Tunnel View AWC", 
-                           "Conical View AWC"))
+dfpdaggAlertFOD$FOD <- recode_factor(dfpdaggAlertFOD$FOD, 
+                         "White Cane" = "white cane", 
+                         "Conical View AWC" = "conical view AWC", 
+                         "Tunnel View AWC" ="tunnel view AWC")
 
+dfpdaggAlertFOD$FOD <- factor(dfpdaggAlertFOD$FOD, 
+                              levels=c("white cane", 
+                                       "tunnel view AWC", 
+                                       "conical view AWC"))
 
 dfpdaggAlertFOD$augmentedObjectDetected[dfpdaggAlertFOD$augmentedObjectDetected == 0] <- NA
 
@@ -406,10 +411,10 @@ dfpdaggAlertFOD[1, "auglowerci"] <- NA
 
 dfpdaggAlertFOD[1, "augupperci"] <- NA
 
-ggplot(data = dfpdaggAlertFOD, aes(x = FOD, 
-                                group = FOD)) +
-  geom_point(aes(y = totalObjectDetected), color="purple", position = position_dodge(0), alpha=1, size = 5) +
-  geom_line(aes(y = totalObjectDetected), position = position_dodge(0), 
+ggplot(data = dfpdaggAlertFOD, aes(x = FOD, group = 1)) +
+  scale_color_manual(labels = c("total", "kinetic", "vibration"), values = c("purple", "red2", "skyblue")) +
+  geom_point(aes(y = totalObjectDetected, color="purple"), position = position_dodge(0), alpha=1, size = 5) +
+  geom_line(aes(y = totalObjectDetected, color="purple"), 
             alpha = 1, 
             size = 1) +
   geom_errorbar(aes(ymin = totallowerci, 
@@ -417,8 +422,8 @@ ggplot(data = dfpdaggAlertFOD, aes(x = FOD,
                 width = 0.2, 
                 color = "Black", 
                 position = position_dodge(0)) +
-  geom_point(aes(y = physicalObjectDetected), color="red2", position = position_dodge(0.2), alpha=1, size = 5) +
-  geom_line(aes(y = physicalObjectDetected), position = position_dodge(0.2), 
+  geom_point(aes(y = physicalObjectDetected, color="red2"), position = position_dodge(0.2), alpha=1, size = 5) +
+  geom_line(aes(y = physicalObjectDetected, color="red2"), 
             alpha = 1, 
             size = 1) +
     geom_errorbar(aes(ymin = physlowerci, 
@@ -426,33 +431,36 @@ ggplot(data = dfpdaggAlertFOD, aes(x = FOD,
                                      width = 0.2, 
                                      color = "Black", 
                                      position = position_dodge(0.2)) +
-  geom_point(aes(y = augmentedObjectDetected), color="skyblue",  position = position_dodge(-0.2), alpha=1, size = 5) +
-  geom_line(aes(y = augmentedObjectDetected), position = position_dodge(-0.2), 
+  geom_point(aes(y = augmentedObjectDetected, color="vibration"),  position = position_dodge(-0.2), alpha=1, size = 5) +
+  geom_line(aes(x = FOD, y = augmentedObjectDetected, color="vibration"),
             alpha = 1, 
             size = 1) +
     geom_errorbar(aes(ymin = auglowerci, 
                       ymax = augupperci), 
                   width = 0.2, 
                   color = "Black", 
-                  position = position_dodge(-0.2)) +
-  ylab("Average Number of Alerts") +
+                  position = position_dodge(-0.2)) + 
+  expand_limits(y = 0) +
+  ylab("Average number of alerts") +
   xlab("") +
   scale_y_continuous()+
   theme_bw() +
   theme(
     legend.position = "bottom",
-    axis.text.x = element_text(size = 14),
-    axis.text.y = element_text(size = 14),
-    axis.title = element_text(size = 14),
-    legend.title = element_text(size = 14),
-    legend.text = element_text(size = 14),
+    axis.text.x = element_text(size = 18),
+    axis.text.y = element_text(size = 18),
+    axis.title = element_text(size = 18),
+    legend.title = element_text(size = 18),
+    legend.text = element_text(size = 18),
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     axis.line = element_line(colour = "black")
   ) +
-  scale_color_discrete("") +
-  scale_shape_discrete("") 
+  guides(color=guide_legend("Alerts: ")) 
+  #scale_color_hue(labels = c("Kinetic Alerts", "Vibration Alerts", "Combined Alerts")) +
+  #scale_color_discrete("") +
+  #scale_shape_discrete("") 
 
 
 #----- Mean: Range LMM -----
@@ -482,9 +490,7 @@ anova(WS.1.Pid, WS.FOD.Pid)
 dfpSumTestID$Range <- as.factor(dfpSumTestID$Range)
 
 # adding scenario
-WS.FOD.Range.Pid <- lmer(avgSpeed ~ FOD + Range +
-                     #(1 | Scenario) +
-                     (1 | ParticipantID),
+WS.FOD.Range.Pid <- lmer(avgSpeed ~  Range + (1 | ParticipantID),
                    data = dfpSumTestID, 
                    REML = FALSE
 )
@@ -562,11 +568,14 @@ MeansTest <- dfpSumTestID %>%
   dplyr::summarise(avgNumberOfObjDet = mean(NumberOfObjDet),
                    sdNumberOfObjDet = sd(NumberOfObjDet),
                    sdNumberOfAlerts = sd(avgNumberOfAlerts),
-                   avgNumberOfAlerts = mean(avgNumberOfAlerts))
+                   avgNumberOfAlerts = mean(avgNumberOfAlerts),
+                   avgobjectCollisions = mean(objectCollisions))
 
 MeansTest
 
 summary(glm(NumberOfObjDet ~ FOD, data = dfpSumTestID, family = poisson)) 
+
+summary(glm(objectCollisions ~ NumberOfObjDet, data = dfpSumTestID, family = poisson), corr=TRUE) 
 
 summary(glm(avgNumberOfAlerts ~ FOD, data = dfpSumTestID, family = poisson))
 
@@ -726,6 +735,20 @@ sumAugAlertObjects <- AugAlertObjects %>%
 
 AlertsPerObstacle <- merge(sumPhysAlertObjects, sumAugAlertObjects, all=TRUE)
 
+
+MeansAlertsPerObstacle <- AlertsPerObstacle %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::summarise(NumberOfObjPhysDet = mean(NumberOfObjPhysDet, na.rm=TRUE),
+                   sdNumberOfObjPhysDet = sd(NumberOfObjPhysDet, na.rm=TRUE),
+                   avgNumberOfPhysAlertsPerObj = mean(avgNumberOfPhysAlertsPerObj, na.rm=TRUE),
+                   sdavgNumberOfPhysAlertsPerObj = sd(avgNumberOfPhysAlertsPerObj, na.rm=TRUE),
+                   NumberOfObjAugDet = mean(NumberOfObjAugDet, na.rm=TRUE),
+                   sdNumberOfObjAugDet = sd(NumberOfObjAugDet, na.rm=TRUE),
+                   avgNumberOfAugAlertsPerObj = mean(avgNumberOfAugAlertsPerObj, na.rm=TRUE),
+                   sdavgNumberOfAugAlertsPerObj = sd(avgNumberOfAugAlertsPerObj, na.rm=TRUE))
+
+view(MeansAlertsPerObstacle)
+
 AlertsPerObstacle[is.na(AlertsPerObstacle)] <- 0
 
 AlertsPerObstacle <- merge(dfpSumTestID, AlertsPerObstacle, all=TRUE)
@@ -751,31 +774,31 @@ summary(WS.1.Pid)
 r.squaredGLMM(WS.1.Pid) 
 
 # add scenario
-WS.Coll.Pid <- lmer(avgSpeed ~ objectCollisions +
+WS.Phys.Pid <- lmer(avgSpeed ~ physObjectDetected +
                      (1 | ParticipantID),
                    data = dfpSumTestID, REML = FALSE)
 
-summary(WS.Coll.Pid)
-r.squaredGLMM(WS.Coll.Pid) 
-anova(WS.1.Pid, WS.Coll.Pid)
+summary(WS.Phys.Pid)
+r.squaredGLMM(WS.Phys.Pid) 
+anova(WS.1.Pid, WS.Phys.Pid)
 
 # Add Collisions
-WS.Coll.Phys.Pid <- lmer(avgSpeed ~ objectCollisions + physObjectDetected  + 
+WS.Phys.Aug.Pid <- lmer(avgSpeed ~ physObjectDetected  + augObjectDetected +
                       (1 | ParticipantID),
                     data = dfpSumTestID, REML = FALSE)
 
-r.squaredGLMM(WS.Coll.Phys.Pid) 
-summary(WS.Coll.Phys.Pid)
-anova(WS.Coll.Phys.Pid, WS.Coll.Pid)
+r.squaredGLMM(WS.Phys.Aug.Pid) 
+summary(WS.Phys.Aug.Pid)
+anova(WS.Phys.Aug.Pid, WS.Phys.Pid)
 
 # Add obstacles kinetic detected 
-WS.Coll.Phys.Aug.Pid <- lmer(avgSpeed ~ objectCollisions + physObjectDetected + augObjectDetected + 
+WS.Phys.Aug.Coll.Pid <- lmer(avgSpeed ~  physObjectDetected + augObjectDetected + objectCollisions + 
                               (1 | ParticipantID),
                             data = dfpSumTestID, REML = FALSE)
 
-r.squaredGLMM(WS.Coll.Phys.Aug.Pid) 
-summary(WS.Coll.Phys.Aug.Pid)
-anova(WS.Coll.Phys.Aug.Pid, WS.Coll.Phys.Pid)
+r.squaredGLMM(WS.Phys.Aug.Coll.Pid) 
+summary(WS.Phys.Aug.Coll.Pid)
+anova(WS.Phys.Aug.Coll.Pid, WS.Phys.Aug.Pid)
 
 # Add Collisions
 WS.Phys.Pid <- lmer(avgSpeed ~physObjectDetected  + 
@@ -832,6 +855,14 @@ r.squaredGLMM(WS.Phys.Per.Pid)
 summary(WS.Phys.Per.Pid)
 anova(WS.Phys.Per.Pid, WS.Phys.Pid)
 
+WS.Phys.Per.Pid.Final <- lmer(avgSpeed ~ objectCollisions + NumberOfObjPhysDet + NumberOfObjAugDet + 
+                          (1 | ParticipantID),
+                        data = AlertsPerObstacle, REML = FALSE)
+
+r.squaredGLMM(WS.Phys.Per.Pid.Final) 
+summary(WS.Phys.Per.Pid.Final)
+anova(WS.Phys.Per.Pid, WS.Phys.Pid)
+
 #----- LMM: With everything -----
 
 # Making the NULL model, only including participants
@@ -877,6 +908,17 @@ WS.FOD.Coll.Phys.Per.Pid <- lmer(avgSpeed ~ FOD + objectCollisions + NumberOfObj
 r.squaredGLMM(WS.FOD.Coll.Phys.Per.Pid) 
 summary(WS.FOD.Coll.Phys.Per.Pid)
 anova(WS.FOD.Coll.Phys.Per.Pid, WS.FOD.Coll.Phys.Pid)
+
+
+# Add obstacles vibration detected 
+WS.Phys.Aug.Pid <- lmer(avgSpeed ~ augObjectDetected + NumberOfObjPhysDet + 
+                                       (1 | ParticipantID),
+                                     data = AlertsPerObstacle, REML = FALSE)
+
+r.squaredGLMM(WS.FOD.Coll.Phys.Per.Aug.Pid) 
+summary(WS.Phys.Aug.Pid)
+anova(WS.FOD.Coll.Phys.Per.Aug.Pid, WS.FOD.Coll.Phys.Per.Pid)
+
 
 # Add obstacles vibration detected 
 WS.FOD.Coll.Phys.Per.Aug.Pid <- lmer(avgSpeed ~ FOD + objectCollisions + NumberOfObjPhysDet + avgNumberOfPhysAlertsPerObj + NumberOfObjAugDet +
@@ -1028,7 +1070,11 @@ meanCollisions
 summary(glm(objectCollisions ~ FOD, data = dfpSumTestID)) 
 
 
-summary(glm(objectCollisions ~ physObjectDetected + augObjectDetected, data = dfpSumTestID)) 
+summary(glm(objectCollisions ~ physObjectDetected, data = dfpSumTestID), corr=TRUE) 
+
+reg = glm(objectCollisions ~ physObjectDetected + augObjectDetected, data = dfpSumTestID)
+with(summary(reg), 1 - deviance/null.deviance)
+
 
 # Making the NULL model, only including participants
 WS.1.Pid <- lmer(avgSpeed ~ 1 +
@@ -1104,7 +1150,10 @@ CollPerObj <- CollNumObj %>%
 
 CollPerObj
 
-summary(lm(NumberOfObjColl ~ FOD, data = CollPerObj)) 
+
+summary(glm(NumberOfObjColl ~ physObjectDetected, data = CollPerObj), corr=TRUE) 
+
+summary(glm(NumberOfObjColl ~ FOD, data = CollPerObj)) 
 
 summary(lm(avgNumberOfColl ~ FOD, data = CollPerObj)) 
 
@@ -1767,10 +1816,10 @@ anova(lme1, lmeNull)
 #----- Plot Alert vs speed -----
 dfpSumTestID %>%
   ggplot(aes(
-    x = log(objectDetected+1),
+    x = objectDetected,
     #x = log(physObjectDetected+1),
     #x = log(augObjectDetected+1),
-    y = log(avgSpeed)#,
+    y = avgSpeed#,
     #color = factor(ParticipantID)
   )) +
   geom_point() +
@@ -1790,27 +1839,45 @@ dfpSumTestID %>%
   scale_color_discrete("") +
   scale_shape_discrete("")
 
-dfpSumTestID %>%
+temp <- dfpSumTestID
+
+temp$FOD <- recode_factor(temp$FOD, 
+                                     "White Cane" = "white cane",
+                                     "Tunnel View AWC" ="tunnel view AWC", 
+                                     "Conical View AWC" = "conical view AWC"
+                                     )
+
+
+temp %>%
+  #filter(FOD != "white cane") %>%
   ggplot(aes(
-    #x = log(objectDetected+1),
-    x = log(physObjectDetected+1),
-    y = log(augObjectDetected+1),
+    #x = objectDetected,
+    #x = augObjectDetected,
+    #x = physObjectDetected,
+    y = avgSpeed,
+    color = FOD
     #y = log(avgSpeed)#,
-    size = avgSpeed
+    #size = avgSpeed
   )) +
-  geom_point() +
-  #geom_smooth(se = F) +
-  #geom_smooth(method=lm,se = F) +
+  geom_point(data = . %>% filter(FOD != "white cane"), aes(x = augObjectDetected)) +
+  geom_smooth(data = . %>% filter(FOD != "white cane"), aes(x = augObjectDetected),method="lm", se = F) +
+  #geom_point(aes(x = physObjectDetected)) +
+  #geom_smooth(aes(x = physObjectDetected),method="lm", se = F) +
+  scale_x_continuous(trans='log10') +
   theme_bw() +
-  ylab("Augmented Alerts") +
-  xlab("Number of Physical Alerts") +
+  ylab("Average walking speed (m/s)") +
+  xlab("Number of vibration alerts") +
   theme(
     legend.position = "bottom",
-    axis.text.x = element_text(size = 14),
-    axis.text.y = element_text(size = 14),
-    axis.title = element_text(size = 14),
-    legend.title = element_text(size = 14),
-    legend.text = element_text(size = 14)
+    axis.text.x = element_text(size = 18),
+    axis.text.y = element_text(size = 18),
+    axis.title = element_text(size = 18),
+    legend.title = element_text(size = 18),
+    legend.text = element_text(size = 18),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black")
   ) +
   scale_color_discrete("") +
   scale_shape_discrete("")
@@ -2660,8 +2727,8 @@ test <- test %>%
 
 test <- test %>%
   dplyr::mutate(PhysSpeedDiff = PhysSpeedSlut - PhysSpeedStart) %>%
-  mutate(PhysSpeedChange = ifelse(PhysSpeedDiff < 0, "Slowed Down After Physical Alert",
-                              ifelse(PhysSpeedDiff > 0, "Speeded Up After Physical Alert", NA)))
+  mutate(PhysSpeedChange = ifelse(PhysSpeedDiff < 0, "Kinetic Alert",
+                              ifelse(PhysSpeedDiff > 0, "Speeded Up After Kinetic Alert", NA)))
 
 test <- test %>%
   dplyr::filter(TimeSinceAugDetStart > 0 & TimeSinceAugDetStart <= 0.1 &!is.na(TimeSinceAugDetStart)) %>%
@@ -2683,19 +2750,17 @@ test <- test %>%
 
 test <- test %>%
   dplyr::mutate(AugSpeedDiff = AugSpeedSlut - AugSpeedStart) %>%
-  mutate(AugSpeedChange = ifelse(AugSpeedDiff < 0, "Slowed Down After Augmented Alert",
-                                 ifelse(AugSpeedDiff > 0, "Speeded Up After Augmented Alert", NA)))
+  mutate(AugSpeedChange = ifelse(AugSpeedDiff < 0, "Vibration Alert",
+                                 ifelse(AugSpeedDiff > 0, "Speeded Up After Vibration Alert", NA)))
+
 
 test %>%
-  filter(TimeSinceObjDetStart < 5 & TimeSinceObjDetStart > 0 & !is.na(AugSpeedChange)& !is.na(PhysSpeedChange)) %>%
-  ggplot(aes(
-    x = TimeSinceObjDetStart,
-    y = rollingSpeedMedian
-  )) +
-  geom_smooth(aes(colour = AugSpeedChange, linetype = PhysSpeedChange), se = F) +
+  ggplot() +
+  geom_boxplot(aes(x=AugSpeedChange,y=AugSpeedDiff, color="orange")) +
+  geom_boxplot(aes(x=PhysSpeedChange,y=PhysSpeedDiff, color="blue")) +
   theme_bw() +
-  ylab("Walking Speed (m/s)") +
-  xlab("Time Since Alert Onset (seconds)") +
+  ylab("Change in Walking Speed (m/s) after an alert") +
+  xlab("") +
   theme(
     legend.position = "bottom",
     axis.text.x = element_text(size = 14),
@@ -2710,6 +2775,38 @@ test %>%
   ) +
   scale_color_discrete("") +
   scale_shape_discrete("")
+
+test %>%
+  filter(TimeSinceObjDetStart < 5 & TimeSinceObjDetStart > 0) %>%
+  ggplot(aes(
+    x = TimeSinceObjDetStart,
+    y = rollingSpeedMedian
+  )) +
+  geom_smooth(data = . %>% filter(!is.na(PhysSpeedChange) & PhysSpeedChange != "Speeded Up After Kinetic Alert"), 
+              aes(colour = PhysSpeedChange), se = F) +
+  geom_smooth(data = . %>% filter(!is.na(AugSpeedChange) & AugSpeedChange != "Speeded Up After Vibration Alert"), 
+              aes(colour = AugSpeedChange, linetype = as.factor(Range)), se = F) +
+  expand_limits(y = 0) +
+  theme_bw() +
+  ylab("Walking Speed (m/s)") +
+  xlab("Time Since Alert Onset (seconds)") +
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 14),
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 14),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black")
+  ) + 
+  guides(linetype = guide_legend(title="Preview Range")) +
+  scale_color_discrete("") +
+  scale_shape_discrete("")
+
+
 
 
 #### --------------------------------------------------------------------

@@ -35,6 +35,32 @@ library(emmeans)
 load("data_3StudyBlindParticipant_All.rda")
 load("data_Participants_bpSumTestID.rda")
 
+#----- Data Overview: Means -----
+df_bpSumTestID124 <- df_bpSumTestID %>%
+  filter(Range != 3)
+
+meanDF <- df_bpSumTestID124 %>%
+  dplyr::group_by(FOD) %>%
+  dplyr::summarise(avgSpeed = mean(avgSpeed),
+                   avgMedianSpeed = mean(medianSpeed),
+                   avgColl = mean(objectCollisions),
+                   avgDet = mean(objectDetected),
+                   avgPhysDet = mean(physObjectDetected),
+                   avgAugDet = mean(augObjectDetected))
+
+meanDF
+
+summary(lm(avgSpeed ~ objectDetected + testID, data = df_bpSumTestID))
+summary(lm(avgSpeed ~ physObjectDetected + testID, data = df_bpSumTestID))
+summary(lm(avgSpeed ~ augObjectDetected + testID, data = df_bpSumTestID))
+summary(lm(avgSpeed ~ objectCollisions + testID, data = df_bpSumTestID))
+summary(lm(avgSpeed ~ physObjectDetected + augObjectDetected + objectCollisions + FOD + Range + testID, data = df_bpSumTestID))
+
+
+summary(lm(avgSpeed ~ FOD + testID, data = df_bpSumTestID))
+
+summary(lm(avgSpeed ~ Range + testID, data = df_bpSumTestID))
+
 #----- Data Overview: Detection Distance -----
 
 # Density plot of the alert distance for each FOD.
@@ -115,7 +141,7 @@ ggplot(df_bpSumTestID, aes(x=factor(Scenario), y=avgSpeed)) +
 #----- Data Overview: Variance between Run Number -----
 ggplot(df_bpSumTestID, aes(x=RunNumber, y=avgSpeed)) +
   geom_point() +
-  geom_smooth(method = lm)+
+  geom_smooth()+
   theme_bw() +
   ylab("Average Walking Speed (m/s)") +
   xlab("Run Number") +
@@ -165,7 +191,7 @@ sd(df_bpSumTestID$objectCollisions)
 ### Check if logging the data will have any effect on the data
 
 # How is the data if we just add a linear function
-summary(lm(avgSpeed ~ objectDetected, data = df_bpSumTestID)) # R-squared:  0.20
+summary(lm(avgSpeed ~ objectDetected + FOD, data = df_bpSumTestID)) # R-squared:  0.20
 
 # How is the data if we make a log transformation on the walking speed. Making it Exponential function
 summary(lm(log(avgSpeed) ~ objectDetected, data = df_bpSumTestID)) # R-squared:  0.27
@@ -551,8 +577,8 @@ df_bpSumTestID %>%
     #color = factor(ParticipantID)
   )) +
   geom_point() +
-  geom_smooth(se = F) +
-  #geom_smooth(method=lm,se = F) +
+  #geom_smooth(se = F) +
+  geom_smooth(method=lm, se = F) +
   theme_bw() +
   ylab("Average Walking Speed (m/s) per Test Run") +
   xlab("Number of Alerts per Test Run") +
@@ -616,7 +642,7 @@ df_bp %>%
 
 #----- Plot Alert Cost: Per AWC (cleaned for paper) -----
 df_bp %>%
-  filter(TimeSinceObjDetStart < 3.5 & TimeSinceObjDetStart > 0) %>%
+  filter(TimeSinceObjDetStart < 3 & TimeSinceObjDetStart > 0) %>%
   ggplot(aes(
     x = TimeSinceObjDetStart,
     y = rollingSpeedMedian,

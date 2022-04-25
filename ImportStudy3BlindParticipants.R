@@ -65,15 +65,15 @@ df_bp$FOD <- factor(df_bp$FOD,
                            "Tunnel View AWC"))
 
 # Rename Columns
-df_bp%<>% dplyr::rename(Range = Detection_range_in_Meters,
-                      day = Day_nr.,
-                      PersonSpeed = Person_Speed,
-                      TimeSeconds = Time_in_MS,
-                      TimeStamp = Time_stamp,
-                      ObjectDistance = Distance_to_object,
-                      ObjectCollision = Object_collision,
-                      ObjectDetected = Object_detected,
-                      ParticipantID = Participant.ID)
+df_bp %<>% dplyr::rename(Range = Detection_range_in_Meters,
+                         day = Day_nr.,
+                         PersonSpeed = Person_Speed,
+                         TimeSeconds = Time_in_MS,
+                         TimeStamp = Time_stamp,
+                         ObjectDistance = Distance_to_object,
+                         ObjectCollision = Object_collision,
+                         ObjectDetected = Object_detected,
+                         ParticipantID = Participant.ID)
 
 
 # Fix Range
@@ -191,7 +191,7 @@ df_bp %<>%
   dplyr::summarise(objCollDuration = sum(TimeSincePrevRow)) %>% 
   right_join(df_bp) %>% 
   arrange(rowNum) %>% 
-  relocate(objCollDuration,ObjectCollision)
+  relocate(objCollDuration, ObjectCollision)
 
 # Calculate Gap duration between collisions
 df_bp %<>%
@@ -302,6 +302,18 @@ df_bp %<>% dplyr::group_by(testID) %>%
                 TimeSincePhysDetStop = ifelse(PhysDetGapInTestID==0,NA,TimeSincePhysDetStop))%>%
   ungroup()
 
+#Track the last detected obstacle
+LastObstaclePhysDetected <- df_bp %>% 
+  dplyr::group_by(testID, PhysDetInTestID) %>% 
+  dplyr::filter(ObjectDetected != "") %>%
+  dplyr::summarise(LastObjPhysDet = ObjectDetected)  %>% 
+  filter(!(PhysDetInTestID == lead(PhysDetInTestID) & testID == lead(testID)) | is.na(lead(PhysDetInTestID)))
+
+df_bp <- merge(df_bp, LastObstaclePhysDetected, by=c("testID","PhysDetInTestID"), all=T) %>%
+  arrange(rowNum)
+
+remove(LastObstaclePhysDetected)
+
 # create speed changes from physDetstart
 df_bp %<>% 
   filter(PhysDetStart == 1) %>%
@@ -328,6 +340,18 @@ df_bp %<>% dplyr::group_by(testID) %>%
   dplyr::mutate(TimeSinceAugDetStop = cumsum(TimeSincePrevRow),
                 TimeSinceAugDetStop = ifelse(AugDetGapInTestID == 0, NA, TimeSinceAugDetStop))%>%
   ungroup()
+
+#Track the last detected obstacle
+LastObstacleAugDetected <- df_bp %>% 
+  dplyr::group_by(testID, AugDetInTestID) %>% 
+  dplyr::filter(ObjectDetected != "") %>%
+  dplyr::summarise(LastObjAugDet = ObjectDetected)  %>% 
+  filter(!(AugDetInTestID == lead(AugDetInTestID) & testID == lead(testID)) | is.na(lead(AugDetInTestID)))
+
+df_bp <- merge(df_bp, LastObstacleAugDetected, by=c("testID","AugDetInTestID"), all=T) %>%
+  arrange(rowNum)
+
+remove(LastObstacleAugDetected)
 
 # create speed changes from augDetstart
 df_bp %<>% 
@@ -358,11 +382,11 @@ col_order <- c("rowNum", "day", "ParticipantID", "testID", "newTestStarts", "Run
                "objDetGapInTestID", "DetGapDuration",
                # Physical Detection
                "PhysDetInTestID", "PhysDetOngoing", "PhysDetStart", "TimeSincePhysDetStart", "SpeedAtPhysDetStart", 
-               "SpeedChangeFromPhysDetStart", "PhysDetStop", "TimeSincePhysDetStop",  
+               "SpeedChangeFromPhysDetStart", "PhysDetStop", "TimeSincePhysDetStop",  "LastObjPhysDet", 
                "PhysDetGapInTestID",
                # Augmented Detection
                "AugDetInTestID", "AugDetOngoing", "AugDetStart", "TimeSinceAugDetStart", "SpeedAtAugDetStart", 
-               "SpeedChangeFromAugDetStart", "AugDetStop", "TimeSinceAugDetStop",  
+               "SpeedChangeFromAugDetStart", "AugDetStop", "TimeSinceAugDetStop",  "LastObjAugDet",
                "AugDetGapInTestID",
                # Collision
                "ObjectCollision", "objCollInTestID", "objCollStart", "CollStartTime", "TimeSinceObjCollStart", "SpeedAtCollStart", "SpeedChangeFromCollStart", 
